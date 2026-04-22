@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAILY Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --lila: #8A7A84; --lila-dark: #6B5D66; --lila-soft: #C4B0BC; --lila-pale: #EDE5E9;
+      --cream: #F5F0EB; --beige: #E8DDD5; --white: #FFFFFF;
+      --text: #2C2420; --text-soft: #7A6E6A; --text-light: #ADA8A5;
+      --gold: #C9A96E; --success: #6BAF8D; --error: #C46A5A;
+      --sidebar-w: 240px;
+      --font-display: 'Cormorant Garamond', serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-body); background: var(--cream); color: var(--text); display: flex; min-height: 100vh; }
+    img { max-width: 100%; display: block; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+
+    /* SIDEBAR */
+    #sidebar {
+      width: var(--sidebar-w); background: var(--text); color: white;
+      display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0;
+      z-index: 100; overflow-y: auto;
+    }
+    .sidebar-logo {
+      font-family: var(--font-display); font-size: 1.8rem; font-weight: 300;
+      letter-spacing: 0.2em; padding: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: white;
+    }
+    .sidebar-logo small { display: block; font-family: var(--font-body); font-size: 0.65rem; letter-spacing: 0.2em; opacity: 0.5; text-transform: uppercase; margin-top: 0.2rem; }
+    .sidebar-nav { padding: 1rem 0; flex: 1; }
+    .nav-section-title { padding: 0.75rem 1.25rem 0.25rem; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.4; }
+    .nav-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.7rem 1.25rem; font-size: 0.85rem;
+      color: rgba(255,255,255,0.7); cursor: pointer;
+      transition: all 0.2s; border-left: 3px solid transparent;
+    }
+    .nav-item i { width: 18px; text-align: center; }
+    .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+    .nav-item.active { color: white; border-left-color: var(--lila-soft); background: rgba(138,122,132,0.15); }
+    .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-footer a { color: rgba(255,255,255,0.5); font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+    .sidebar-footer a:hover { color: white; }
+
+    /* MAIN */
+    #main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+    .topbar {
+      background: var(--white); border-bottom: 1px solid var(--beige);
+      padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; }
+    .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+    .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--lila); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; }
+    .content { padding: 2rem; }
+
+    /* PANELS */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* CARDS */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--white); border-radius: 16px; padding: 1.5rem;
+      border-left: 4px solid var(--lila);
+    }
+    .stat-card.gold { border-left-color: var(--gold); }
+    .stat-card.green { border-left-color: var(--success); }
+    .stat-card.rose { border-left-color: #E8B4B8; }
+    .stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .stat-num { font-family: var(--font-display); font-size: 2rem; font-weight: 400; }
+    .stat-label { font-size: 0.75rem; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* FORM */
+    .card { background: var(--white); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 400; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--beige); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-soft); margin-bottom: 0.4rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    .form-input {
+      width: 100%; padding: 0.7rem 0.9rem;
+      border: 1.5px solid var(--beige); border-radius: 10px;
+      font-size: 0.875rem; background: var(--cream); outline: none; color: var(--text);
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--lila); background: var(--white); }
+    textarea.form-input { min-height: 100px; resize: vertical; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 100px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+    .btn-primary { background: var(--lila); color: white; }
+    .btn-primary:hover { background: var(--lila-dark); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger  { background: var(--error); color: white; }
+    .btn-outline { background: transparent; color: var(--lila); border: 1.5px solid var(--lila-soft); }
+    .btn-outline:hover { background: var(--lila-pale); }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.78rem; }
+    .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th { text-align: left; padding: 0.75rem 1rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-soft); border-bottom: 2px solid var(--beige); font-weight: 500; }
+    tbody tr { border-bottom: 1px solid var(--beige); transition: background 0.15s; }
+    tbody tr:hover { background: var(--cream); }
+    tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
+    .product-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+    .status-badge { padding: 0.2rem 0.6rem; border-radius: 100px; font-size: 0.7rem; font-weight: 600; }
+    .status-active  { background: rgba(107,175,141,0.15); color: var(--success); }
+    .status-pending { background: rgba(201,169,110,0.15); color: var(--gold); }
+    .status-done    { background: rgba(138,122,132,0.15); color: var(--lila); }
+    .status-low     { background: rgba(196,106,90,0.15); color: var(--error); }
+
+    /* SHADES EDITOR */
+    .shade-editor { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-top: 0.5rem; }
+    .shade-edit-dot { position: relative; }
+    .shade-edit-dot input[type=color] { width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; padding: 2px; background: transparent; }
+    .shade-add-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px dashed var(--beige); display: flex; align-items: center; justify-content: center; color: var(--text-light); transition: all 0.2s; }
+    .shade-add-btn:hover { border-color: var(--lila); color: var(--lila); }
+
+    /* SETTINGS */
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .setting-card { background: var(--white); border-radius: 16px; padding: 1.5rem; }
+    .setting-card h4 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 400; margin-bottom: 1rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    .setting-card h4 i { color: var(--lila); }
+
+    /* IMAGE UPLOAD */
+    .upload-area {
+      border: 2px dashed var(--beige); border-radius: 12px;
+      padding: 2rem; text-align: center; cursor: pointer;
+      transition: all 0.2s; background: var(--cream);
+    }
+    .upload-area:hover { border-color: var(--lila-soft); background: var(--lila-pale); }
+    .upload-area i { font-size: 2rem; color: var(--text-light); margin-bottom: 0.75rem; }
+    .upload-area p { font-size: 0.85rem; color: var(--text-soft); }
+    .preview-imgs { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .preview-img { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; position: relative; }
+
+    /* ORDERS */
+    .order-card { background: var(--white); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; }
+    .order-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .order-id { font-family: var(--font-display); font-size: 1.1rem; font-weight: 400; }
+    .order-items { display: flex; flex-direction: column; gap: 0.4rem; }
+    .order-item-row { display: flex; justify-content: space-between; font-size: 0.825rem; color: var(--text-soft); }
+
+    /* BLOG EDITOR */
+    .blog-editor textarea { min-height: 200px; }
+
+    /* Toast */
+    #admin-toast { position: fixed; top: 1rem; right: 1rem; z-index: 9999; }
+    .toast { background: var(--text); color: white; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 0.5rem; animation: fadeIn 0.3s ease; }
+    .toast.ok { background: var(--success); }
+    .toast.err { background: var(--error); }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
+
+    @media (max-width: 768px) {
+      #sidebar { width: 200px; transform: translateX(-200px); transition: transform 0.3s; }
+      #sidebar.open { transform: translateX(0); }
+      #main { margin-left: 0; }
+      .form-grid { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">BAILY<small>Panel de Administración</small></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">General</div>
+    <div class="nav-item active" onclick="showPanel('dashboard',this)">
+      <i class="fa-solid fa-chart-line"></i> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPanel('orders',this)">
+      <i class="fa-solid fa-box"></i> Pedidos
+      <span class="status-badge status-active" style="margin-left:auto;font-size:0.6rem">3</span>
+    </div>
+    <div class="nav-section-title">Catálogo</div>
+    <div class="nav-item" onclick="showPanel('products',this)">
+      <i class="fa-solid fa-bag-shopping"></i> Productos
+    </div>
+    <div class="nav-item" onclick="showPanel('add-product',this)">
+      <i class="fa-solid fa-plus-circle"></i> Agregar Producto
+    </div>
+    <div class="nav-item" onclick="showPanel('brands',this)">
+      <i class="fa-solid fa-tag"></i> Marcas
+    </div>
+    <div class="nav-item" onclick="showPanel('categories',this)">
+      <i class="fa-solid fa-grid-2"></i> Categorías
+    </div>
+    <div class="nav-section-title">Contenido</div>
+    <div class="nav-item" onclick="showPanel('blog',this)">
+      <i class="fa-solid fa-book-open"></i> Blog
+    </div>
+    <div class="nav-section-title">Configuración</div>
+    <div class="nav-item" onclick="showPanel('settings',this)">
+      <i class="fa-solid fa-gear"></i> Ajustes
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="index.html"><i class="fa-solid fa-store"></i> Ver tienda</a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+  <div class="topbar">
+    <h1 class="topbar-title" id="panel-title">Dashboard</h1>
+    <div class="topbar-right">
+      <span style="font-size:0.8rem;color:var(--text-soft)" id="tasa-display">Tasa: $1 = Bs 36.50</span>
+      <div class="admin-avatar">BA</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-num" id="stat-products">15</div>
+          <div class="stat-label">Productos</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-icon">🛍️</div>
+          <div class="stat-num" id="stat-orders">0</div>
+          <div class="stat-label">Pedidos (mes)</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-num" id="stat-revenue">$0</div>
+          <div class="stat-label">Ventas (mes)</div>
+        </div>
+        <div class="stat-card rose">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-num" id="stat-rating">4.7</div>
+          <div class="stat-label">Rating promedio</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚡ Acciones rápidas</div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="showPanel('add-product',null)"><i class="fa-solid fa-plus"></i> Nuevo producto</button>
+          <button class="btn btn-outline" onclick="showPanel('settings',null)"><i class="fa-solid fa-dollar-sign"></i> Ajustar tasa</button>
+          <button class="btn btn-outline" onclick="showPanel('orders',null)"><i class="fa-solid fa-box"></i> Ver pedidos</button>
+          <button class="btn btn-outline" onclick="showPanel('blog',null)"><i class="fa-solid fa-pen"></i> Nuevo post</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Productos más vendidos</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Producto</th><th>Marca</th><th>Precio</th><th>Stock</th><th>Reviews</th></tr></thead>
+            <tbody id="dashboard-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="panel" id="panel-orders">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+        <p style="color:var(--text-soft);font-size:0.875rem">Pedidos recibidos por WhatsApp</p>
+        <button class="btn btn-outline btn-sm" onclick="addDemoOrder()"><i class="fa-solid fa-plus"></i> Agregar demo</button>
+      </div>
+      <div id="orders-list">
+        <div style="text-align:center;padding:3rem;color:var(--text-soft)">
+          <i class="fa-solid fa-box-open" style="font-size:3rem;margin-bottom:1rem;display:block;color:var(--beige)"></i>
+          <p>No hay pedidos aún. Los pedidos de WhatsApp los puedes registrar aquí.</p>
+          <button class="btn btn-primary" style="margin-top:1rem" onclick="addDemoOrder()">Agregar pedido demo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS LIST -->
+    <div class="panel" id="panel-products">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+        <input type="search" class="form-input" placeholder="Buscar producto..." style="max-width:300px" oninput="filterAdminProducts(this.value)">
+        <button class="btn btn-primary" onclick="showPanel('add-product',null)"><i class="fa-solid fa-plus"></i> Agregar</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Imagen</th><th>Nombre</th><th>Marca</th><th>Categoría</th>
+                <th>Precio USD</th><th>Precio Bs</th><th>Stock</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="products-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD/EDIT PRODUCT -->
+    <div class="panel" id="panel-add-product">
+      <div class="card">
+        <div class="card-title" id="product-form-title">➕ Nuevo Producto</div>
+        <input type="hidden" id="edit-product-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Nombre del producto *</label>
+            <input type="text" class="form-input" id="pf-name" placeholder="Ej: Studio Fix Fluid Foundation">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Marca *</label>
+            <select class="form-input" id="pf-brand">
+              <option value="">Selecciona marca</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoría *</label>
+            <select class="form-input" id="pf-category">
+              <option value="">Selecciona categoría</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Precio (USD) *</label>
+            <input type="number" class="form-input" id="pf-price" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stock disponible</label>
+            <input type="number" class="form-input" id="pf-stock" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select class="form-input" id="pf-status">
+              <option value="active">Activo</option>
+              <option value="inactive">Inactivo</option>
+              <option value="featured">Destacado</option>
+              <option value="bestseller">Más Vendido</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-input" id="pf-desc" placeholder="Descripción detallada del producto..."></textarea>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Tags (separados por coma)</label>
+            <input type="text" class="form-input" id="pf-tags" placeholder="mate, larga duración, SPF15">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">URL de imagen principal</label>
+            <input type="url" class="form-input" id="pf-image" placeholder="https://...">
+            <p style="font-size:0.72rem;color:var(--text-light);margin-top:0.3rem">Usa URLs de Unsplash, Imgur o sube a Firebase Storage</p>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Tonos disponibles</label>
+            <div class="shade-editor" id="shade-editor-preview">
+              <button class="shade-add-btn" onclick="addShade()"><i class="fa-solid fa-plus fa-xs"></i></button>
+            </div>
+            <div id="shade-names-wrap" style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.5rem" id="shade-names"></div>
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer">
+              <input type="checkbox" id="pf-featured" style="width:16px;height:16px">
+              <span class="form-label" style="margin:0">Producto Destacado</span>
+            </label>
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer">
+              <input type="checkbox" id="pf-bestseller" style="width:16px;height:16px">
+              <span class="form-label" style="margin:0">Más Vendido</span>
+            </label>
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer">
+              <input type="checkbox" id="pf-combo" style="width:16px;height:16px">
+              <span class="form-label" style="margin:0">Es un Combo/Kit</span>
+            </label>
+          </div>
+        </div>
+        <div class="btn-group" style="margin-top:0.5rem">
+          <button class="btn btn-primary" onclick="saveProduct()"><i class="fa-solid fa-save"></i> Guardar Producto</button>
+          <button class="btn btn-outline" onclick="clearProductForm()"><i class="fa-solid fa-rotate-left"></i> Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANDS -->
+    <div class="panel" id="panel-brands">
+      <div class="card">
+        <div class="card-title">🏷️ Gestionar Marcas</div>
+        <div class="form-grid" style="margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Nombre de la marca</label>
+            <input type="text" class="form-input" id="brand-name" placeholder="MAC, NYX, L'Oreal...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">URL del logo</label>
+            <input type="url" class="form-input" id="brand-logo" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">País de origen</label>
+            <input type="text" class="form-input" id="brand-country" placeholder="USA, France, UK...">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addBrand()"><i class="fa-solid fa-plus"></i> Agregar Marca</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Logo</th><th>Nombre</th><th>País</th><th>Productos</th><th>Acciones</th></tr></thead>
+            <tbody id="brands-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="panel" id="panel-categories">
+      <div class="card">
+        <div class="card-title">🗂️ Categorías</div>
+        <div class="form-grid" style="margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-input" id="cat-name" placeholder="Bases, Labios, Ojos...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji</label>
+            <input type="text" class="form-input" id="cat-icon" placeholder="💋 🫧 👁️">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color de fondo</label>
+            <input type="color" class="form-input" id="cat-color" value="#F5E6D3" style="height:46px;padding:4px">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addCategory()"><i class="fa-solid fa-plus"></i> Agregar Categoría</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Icono</th><th>Nombre</th><th>Color</th><th>Productos</th><th>Acciones</th></tr></thead>
+            <tbody id="categories-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOG -->
+    <div class="panel" id="panel-blog">
+      <div class="card">
+        <div class="card-title">✍️ Nuevo Post</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Título</label>
+            <input type="text" class="form-input" id="blog-title" placeholder="Título del artículo">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoría</label>
+            <select class="form-input" id="blog-cat">
+              <option>Tendencias</option><option>Tips</option><option>Tutoriales</option>
+              <option>Marcas</option><option>Noticias</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Extracto</label>
+            <input type="text" class="form-input" id="blog-excerpt" placeholder="Breve descripción del artículo...">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">URL de imagen de portada</label>
+            <input type="url" class="form-input" id="blog-image" placeholder="https://images.unsplash.com/...">
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Contenido del artículo</label>
+            <textarea class="form-input blog-editor" id="blog-content" placeholder="Escribe el contenido aquí..."></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveBlogPost()"><i class="fa-solid fa-save"></i> Publicar Post</button>
+      </div>
+      <div class="card">
+        <div class="card-title">📚 Posts publicados</div>
+        <div id="blog-list"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+      <div class="settings-grid">
+        <div class="setting-card">
+          <h4><i class="fa-solid fa-dollar-sign"></i> Tasa del Dólar</h4>
+          <div class="form-group">
+            <label class="form-label">$1 USD equivale a (Bs):</label>
+            <input type="number" class="form-input" id="s-rate" placeholder="36.50" step="0.01">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSetting('rate')">Actualizar tasa</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fa-solid fa-motorcycle"></i> Costo de Delivery</h4>
+          <div class="form-group">
+            <label class="form-label">Costo delivery Caracas (USD):</label>
+            <input type="number" class="form-input" id="s-delivery" placeholder="3.00" step="0.50">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mínimo para delivery gratis (USD):</label>
+            <input type="number" class="form-input" id="s-free-threshold" placeholder="30">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSetting('delivery')">Guardar</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fa-brands fa-whatsapp"></i> WhatsApp</h4>
+          <div class="form-group">
+            <label class="form-label">Número de WhatsApp:</label>
+            <input type="tel" class="form-input" id="s-wa" placeholder="+58xxxxxxxxxx">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSetting('wa')">Guardar</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fa-solid fa-store"></i> Información de la tienda</h4>
+          <div class="form-group">
+            <label class="form-label">Nombre de la tienda:</label>
+            <input type="text" class="form-input" id="s-name" value="BAILY">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email de contacto:</label>
+            <input type="email" class="form-input" id="s-email" placeholder="hola@baily.ve">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSetting('store')">Guardar</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fa-solid fa-map-location-dot"></i> Zona de Delivery</h4>
+          <div class="form-group">
+            <label class="form-label">Radio de cobertura (km):</label>
+            <input type="number" class="form-input" id="s-radius" placeholder="15" step="1">
+          </div>
+          <p style="font-size:0.78rem;color:var(--text-soft);margin-bottom:0.75rem">Zona actual: Palo Verde → Plaza Venezuela (≈15km)</p>
+          <button class="btn btn-primary btn-sm" onclick="saveSetting('zone')">Guardar zona</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fa-brands fa-firebase" style="color:#F5820D"></i> Firebase</h4>
+          <p style="font-size:0.78rem;color:var(--text-soft);margin-bottom:0.75rem">Configura tu proyecto de Firebase en el archivo <code>js/data.js</code></p>
+          <a href="https://console.firebase.google.com" target="_blank" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-external-link"></i> Ir a Firebase Console
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<div id="admin-toast"></div>
+
+<script src="js/data.js"></script>
+<script>
+// ══════════════════════════════════
+// ADMIN STATE
+// ══════════════════════════════════
+const admin = {
+  settings: JSON.parse(localStorage.getItem('baily_settings') || 'null') || DEFAULT_SETTINGS,
+  products: JSON.parse(localStorage.getItem('baily_admin_products') || 'null') || DEMO_PRODUCTS,
+  brands:   JSON.parse(localStorage.getItem('baily_admin_brands') || 'null') || DEMO_BRANDS,
+  categories: JSON.parse(localStorage.getItem('baily_admin_cats') || 'null') || DEMO_CATEGORIES,
+  blog:     JSON.parse(localStorage.getItem('baily_admin_blog') || 'null') || DEMO_BLOG,
+  orders:   JSON.parse(localStorage.getItem('baily_admin_orders') || '[]'),
+  shades: [],
+  shadeNames: []
+};
+
+function save(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function toast(msg, type='') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('admin-toast').prepend(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ══════════════════════════════════
+// PANEL NAVIGATION
+// ══════════════════════════════════
+function showPanel(id, navEl) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${id}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  const titles = {
+    dashboard:'Dashboard', orders:'Pedidos', products:'Productos',
+    'add-product':'Agregar Producto', brands:'Marcas', categories:'Categorías',
+    blog:'Blog', settings:'Configuración'
+  };
+  document.getElementById('panel-title').textContent = titles[id] || id;
+  // Init panel content
+  if (id==='dashboard')    renderDashboard();
+  if (id==='products')     renderProductsTable();
+  if (id==='brands')       renderBrandsTable();
+  if (id==='categories')   renderCategoriesTable();
+  if (id==='blog')         renderBlogList();
+  if (id==='orders')       renderOrdersList();
+  if (id==='settings')     loadSettings();
+  if (id==='add-product')  populateProductForm();
+}
+
+// ══════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════
+function renderDashboard() {
+  document.getElementById('stat-products').textContent = admin.products.length;
+  document.getElementById('stat-orders').textContent   = admin.orders.length;
+  const rev = admin.orders.reduce((s, o) => s + (o.total || 0), 0);
+  document.getElementById('stat-revenue').textContent  = `$${rev.toFixed(2)}`;
+  const avgRating = admin.products.reduce((s,p) => s + (p.rating||4.5), 0) / admin.products.length;
+  document.getElementById('stat-rating').textContent   = avgRating.toFixed(1);
+
+  const tbody = document.getElementById('dashboard-table');
+  const top = admin.products.filter(p=>p.bestseller||p.featured).slice(0,8);
+  tbody.innerHTML = top.map(p => `
+    <tr>
+      <td><img src="${p.images[0]}" class="product-thumb" onerror="this.src='https://via.placeholder.com/40'"></td>
+      <td>${p.name}</td>
+      <td style="color:var(--lila)">${p.brand}</td>
+      <td>$${p.price.toFixed(2)}</td>
+      <td>${p.stock}</td>
+      <td style="color:var(--text-soft)">${p.reviews||0} ⭐</td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════
+// PRODUCTS
+// ══════════════════════════════════
+function renderProductsTable(filter='') {
+  const prods = filter ? admin.products.filter(p =>
+    `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(filter.toLowerCase())
+  ) : admin.products;
+
+  document.getElementById('products-table').innerHTML = prods.map(p => `
+    <tr>
+      <td><img src="${p.images[0]}" class="product-thumb" onerror="this.src='https://via.placeholder.com/40'"></td>
+      <td>
+        <div style="font-weight:500">${p.name}</div>
+        ${p.featured ? '<span class="status-badge status-active" style="font-size:0.6rem">Destacado</span>' : ''}
+        ${p.bestseller ? '<span class="status-badge status-pending" style="font-size:0.6rem">+Vendido</span>' : ''}
+      </td>
+      <td>${p.brand}</td>
+      <td>${p.category}</td>
+      <td>$${p.price.toFixed(2)}</td>
+      <td>Bs ${(p.price * admin.settings.usdToBs).toLocaleString('es-VE',{maximumFractionDigits:0})}</td>
+      <td>
+        <span class="${p.stock===0?'status-badge status-low':p.stock<=5?'status-badge status-pending':''}">
+          ${p.stock}
+        </span>
+      </td>
+      <td>
+        <div class="btn-group">
+          <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAdminProducts(q) { renderProductsTable(q); }
+
+function populateProductForm() {
+  const sel = document.getElementById('pf-brand');
+  sel.innerHTML = '<option value="">Selecciona marca</option>' +
+    admin.brands.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  const catSel = document.getElementById('pf-category');
+  catSel.innerHTML = '<option value="">Selecciona categoría</option>' +
+    admin.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function saveProduct() {
+  const id = document.getElementById('edit-product-id').value;
+  const name  = document.getElementById('pf-name').value.trim();
+  const price = parseFloat(document.getElementById('pf-price').value);
+  const stock = parseInt(document.getElementById('pf-stock').value) || 0;
+  const brandId = document.getElementById('pf-brand').value;
+  const catId   = document.getElementById('pf-category').value;
+
+  if (!name || !price || !brandId || !catId) { toast('Completa los campos obligatorios', 'err'); return; }
+
+  const brand = admin.brands.find(b => b.id === brandId);
+  const cat   = admin.categories.find(c => c.id === catId);
+  const product = {
+    id: id || `p${Date.now()}`,
+    name, price, stock,
+    brandId, brand: brand?.name || brandId,
+    categoryId: catId, category: cat?.name || catId,
+    description: document.getElementById('pf-desc').value,
+    images: [document.getElementById('pf-image').value || 'https://via.placeholder.com/400x400?text=BAILY'],
+    tags: document.getElementById('pf-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    featured: document.getElementById('pf-featured').checked,
+    bestseller: document.getElementById('pf-bestseller').checked,
+    isCombo: document.getElementById('pf-combo').checked,
+    shades: admin.shades,
+    shadeNames: admin.shadeNames,
+    rating: 4.5, reviews: 0
+  };
+
+  if (id) {
+    const idx = admin.products.findIndex(p => p.id === id);
+    if (idx >= 0) admin.products[idx] = product;
+  } else {
+    admin.products.push(product);
+  }
+
+  save('baily_admin_products', admin.products);
+  toast('✓ Producto guardado', 'ok');
+  clearProductForm();
+  showPanel('products', null);
+}
+
+function editProduct(id) {
+  const p = admin.products.find(x => x.id === id);
+  if (!p) return;
+  populateProductForm();
+  document.getElementById('edit-product-id').value = p.id;
+  document.getElementById('pf-name').value  = p.name;
+  document.getElementById('pf-price').value = p.price;
+  document.getElementById('pf-stock').value = p.stock;
+  document.getElementById('pf-brand').value    = p.brandId;
+  document.getElementById('pf-category').value = p.categoryId;
+  document.getElementById('pf-desc').value     = p.description || '';
+  document.getElementById('pf-image').value    = p.images?.[0] || '';
+  document.getElementById('pf-tags').value     = (p.tags||[]).join(', ');
+  document.getElementById('pf-featured').checked  = p.featured;
+  document.getElementById('pf-bestseller').checked = p.bestseller;
+  document.getElementById('pf-combo').checked      = p.isCombo;
+  document.getElementById('product-form-title').textContent = '✏️ Editar Producto';
+  admin.shades = p.shades || [];
+  admin.shadeNames = p.shadeNames || [];
+  renderShadeEditor();
+  showPanel('add-product', null);
+}
+
+function deleteProduct(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  admin.products = admin.products.filter(p => p.id !== id);
+  save('baily_admin_products', admin.products);
+  renderProductsTable();
+  toast('Producto eliminado', 'ok');
+}
+
+function clearProductForm() {
+  document.getElementById('edit-product-id').value = '';
+  ['pf-name','pf-price','pf-stock','pf-desc','pf-image','pf-tags'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('pf-brand').value = '';
+  document.getElementById('pf-category').value = '';
+  document.getElementById('pf-featured').checked = false;
+  document.getElementById('pf-bestseller').checked = false;
+  document.getElementById('pf-combo').checked = false;
+  document.getElementById('product-form-title').textContent = '➕ Nuevo Producto';
+  admin.shades = []; admin.shadeNames = [];
+  renderShadeEditor();
+}
+
+// SHADES
+function addShade() {
+  admin.shades.push('#FF6B6B');
+  admin.shadeNames.push('Tono ' + (admin.shades.length));
+  renderShadeEditor();
+}
+
+function renderShadeEditor() {
+  const wrap = document.getElementById('shade-editor-preview');
+  wrap.innerHTML = admin.shades.map((c, i) => `
+    <div class="shade-edit-dot">
+      <input type="color" value="${c}" onchange="admin.shades[${i}]=this.value" title="Tono ${i+1}">
+    </div>
+  `).join('') + `<button class="shade-add-btn" onclick="addShade()"><i class="fa-solid fa-plus fa-xs"></i></button>`;
+  document.getElementById('shade-names-wrap').innerHTML = admin.shadeNames.map((n, i) => `
+    <input type="text" class="form-input" value="${n}" style="width:120px;font-size:0.78rem;padding:0.4rem 0.6rem"
+           onchange="admin.shadeNames[${i}]=this.value" placeholder="Nombre tono ${i+1}">
+  `).join('');
+}
+
+// ══════════════════════════════════
+// BRANDS
+// ══════════════════════════════════
+function renderBrandsTable() {
+  document.getElementById('brands-table').innerHTML = admin.brands.map(b => `
+    <tr>
+      <td>${b.logo ? `<img src="${b.logo}" style="height:28px;object-fit:contain;max-width:80px" onerror="this.style.display='none'">` : '—'}</td>
+      <td style="font-weight:500">${b.name}</td>
+      <td>${b.country || '—'}</td>
+      <td>${admin.products.filter(p => p.brandId === b.id).length}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteBrand('${b.id}')"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>
+  `).join('');
+}
+
+function addBrand() {
+  const name    = document.getElementById('brand-name').value.trim();
+  const logo    = document.getElementById('brand-logo').value.trim();
+  const country = document.getElementById('brand-country').value.trim();
+  if (!name) { toast('Ingresa un nombre de marca', 'err'); return; }
+  const brand = { id: name.toLowerCase().replace(/\s+/g,'_'), name, logo, country };
+  admin.brands.push(brand);
+  save('baily_admin_brands', admin.brands);
+  renderBrandsTable();
+  toast('✓ Marca agregada', 'ok');
+  document.getElementById('brand-name').value = '';
+  document.getElementById('brand-logo').value = '';
+}
+
+function deleteBrand(id) {
+  if (!confirm('¿Eliminar esta marca?')) return;
+  admin.brands = admin.brands.filter(b => b.id !== id);
+  save('baily_admin_brands', admin.brands);
+  renderBrandsTable();
+}
+
+// ══════════════════════════════════
+// CATEGORIES
+// ══════════════════════════════════
+function renderCategoriesTable() {
+  document.getElementById('categories-table').innerHTML = admin.categories.map(c => `
+    <tr>
+      <td style="font-size:1.5rem">${c.icon}</td>
+      <td style="font-weight:500">${c.name}</td>
+      <td><span style="background:${c.color};padding:0.2rem 0.75rem;border-radius:100px;font-size:0.75rem">${c.color}</span></td>
+      <td>${admin.products.filter(p => p.categoryId === c.id).length}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>
+  `).join('');
+}
+
+function addCategory() {
+  const name  = document.getElementById('cat-name').value.trim();
+  const icon  = document.getElementById('cat-icon').value.trim();
+  const color = document.getElementById('cat-color').value;
+  if (!name) { toast('Ingresa un nombre', 'err'); return; }
+  const cat = { id: name.toLowerCase().replace(/\s+/g,'_'), name, icon, color };
+  admin.categories.push(cat);
+  save('baily_admin_cats', admin.categories);
+  renderCategoriesTable();
+  toast('✓ Categoría agregada', 'ok');
+}
+
+function deleteCategory(id) {
+  if (!confirm('¿Eliminar esta categoría?')) return;
+  admin.categories = admin.categories.filter(c => c.id !== id);
+  save('baily_admin_cats', admin.categories);
+  renderCategoriesTable();
+}
+
+// ══════════════════════════════════
+// BLOG
+// ══════════════════════════════════
+function renderBlogList() {
+  document.getElementById('blog-list').innerHTML = admin.blog.map(p => `
+    <div style="display:flex;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--beige);align-items:center">
+      <img src="${p.image}" style="width:60px;height:60px;border-radius:8px;object-fit:cover">
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:0.875rem">${p.title}</div>
+        <div style="font-size:0.72rem;color:var(--text-soft)">${p.category} · ${p.date}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteBlogPost('${p.id}')"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  `).join('') || '<p style="color:var(--text-soft);text-align:center;padding:2rem">No hay posts aún</p>';
+}
+
+function saveBlogPost() {
+  const title   = document.getElementById('blog-title').value.trim();
+  const excerpt = document.getElementById('blog-excerpt').value.trim();
+  const content = document.getElementById('blog-content').value.trim();
+  const image   = document.getElementById('blog-image').value.trim();
+  const cat     = document.getElementById('blog-cat').value;
+  if (!title) { toast('Ingresa un título', 'err'); return; }
+  const post = {
+    id: `b${Date.now()}`, title, excerpt, content, image, category: cat,
+    date: new Date().toISOString().split('T')[0], author: 'BAILY Team'
+  };
+  admin.blog.unshift(post);
+  save('baily_admin_blog', admin.blog);
+  renderBlogList();
+  toast('✓ Post publicado', 'ok');
+  ['blog-title','blog-excerpt','blog-content','blog-image'].forEach(id => document.getElementById(id).value = '');
+}
+
+function deleteBlogPost(id) {
+  admin.blog = admin.blog.filter(p => p.id !== id);
+  save('baily_admin_blog', admin.blog);
+  renderBlogList();
+}
+
+// ══════════════════════════════════
+// ORDERS
+// ══════════════════════════════════
+function renderOrdersList() {
+  const wrap = document.getElementById('orders-list');
+  if (!admin.orders.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-soft)">
+      <i class="fa-solid fa-box-open" style="font-size:3rem;margin-bottom:1rem;display:block;color:var(--beige)"></i>
+      <p>No hay pedidos aún.</p>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="addDemoOrder()">Agregar pedido demo</button>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = admin.orders.map(o => `
+    <div class="order-card">
+      <div class="order-header">
+        <div>
+          <span class="order-id">#${o.id}</span>
+          <div style="font-size:0.75rem;color:var(--text-soft)">${o.date} · ${o.customer}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span class="status-badge status-${o.status==='pending'?'pending':o.status==='done'?'done':'active'}">
+            ${o.status==='pending'?'Pendiente':o.status==='done'?'Entregado':'En camino'}
+          </span>
+          <span style="font-weight:600;color:var(--lila)">$${o.total.toFixed(2)}</span>
+        </div>
+      </div>
+      <div class="order-items">
+        ${o.items.map(i => `<div class="order-item-row"><span>${i.name} x${i.qty}</span><span>$${(i.price*i.qty).toFixed(2)}</span></div>`).join('')}
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+        <button class="btn btn-success btn-sm" onclick="updateOrderStatus('${o.id}','done')"><i class="fa-solid fa-check"></i> Entregado</button>
+        <button class="btn btn-outline btn-sm" onclick="updateOrderStatus('${o.id}','shipping')"><i class="fa-solid fa-truck"></i> En camino</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addDemoOrder() {
+  const demo = {
+    id: Date.now(), date: new Date().toLocaleDateString('es-VE'),
+    customer: 'María García', status: 'pending',
+    items: [
+      { name: 'Retro Matte Lipstick (Ruby Woo)', qty: 1, price: 22 },
+      { name: 'Better Than Sex Mascara', qty: 1, price: 28 }
+    ],
+    total: 50, shipping: 'delivery'
+  };
+  admin.orders.unshift(demo);
+  save('baily_admin_orders', admin.orders);
+  renderOrdersList();
+  toast('Pedido demo agregado', 'ok');
+}
+
+function updateOrderStatus(id, status) {
+  const order = admin.orders.find(o => String(o.id) === String(id));
+  if (order) { order.status = status; save('baily_admin_orders', admin.orders); renderOrdersList(); toast('Estado actualizado', 'ok'); }
+}
+
+function deleteOrder(id) {
+  admin.orders = admin.orders.filter(o => String(o.id) !== String(id));
+  save('baily_admin_orders', admin.orders);
+  renderOrdersList();
+}
+
+// ══════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════
+function loadSettings() {
+  const s = admin.settings;
+  document.getElementById('s-rate').value          = s.usdToBs || 36.5;
+  document.getElementById('s-delivery').value      = s.deliveryCost || 3;
+  document.getElementById('s-free-threshold').value= s.freeDeliveryThreshold || 30;
+  document.getElementById('s-wa').value            = s.whatsappNumber || '';
+  document.getElementById('s-name').value          = s.storeName || 'BAILY';
+  document.getElementById('s-email').value         = s.storeEmail || '';
+  document.getElementById('s-radius').value        = s.deliveryZone?.radiusKm || 15;
+  document.getElementById('tasa-display').textContent = `Tasa: $1 = Bs ${s.usdToBs}`;
+}
+
+function saveSetting(type) {
+  if (type === 'rate') {
+    admin.settings.usdToBs = parseFloat(document.getElementById('s-rate').value) || 36.5;
+    document.getElementById('tasa-display').textContent = `Tasa: $1 = Bs ${admin.settings.usdToBs}`;
+  }
+  if (type === 'delivery') {
+    admin.settings.deliveryCost = parseFloat(document.getElementById('s-delivery').value) || 3;
+    admin.settings.freeDeliveryThreshold = parseFloat(document.getElementById('s-free-threshold').value) || 30;
+  }
+  if (type === 'wa') {
+    admin.settings.whatsappNumber = document.getElementById('s-wa').value;
+  }
+  if (type === 'store') {
+    admin.settings.storeName = document.getElementById('s-name').value;
+    admin.settings.storeEmail = document.getElementById('s-email').value;
+  }
+  if (type === 'zone') {
+    if (!admin.settings.deliveryZone) admin.settings.deliveryZone = DEFAULT_SETTINGS.deliveryZone;
+    admin.settings.deliveryZone.radiusKm = parseInt(document.getElementById('s-radius').value) || 15;
+  }
+  save('baily_settings', admin.settings);
+  toast('✓ Configuración guardada', 'ok');
+}
+
+// INIT
+renderDashboard();
+</script>
+</body>
+</html>
