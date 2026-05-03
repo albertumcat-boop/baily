@@ -85,7 +85,7 @@ h1,h2,h3,.serif{font-family:"Georgia Pro",Georgia,serif}
 .brand-cnt{font-size:11px;color:var(--mauve);font-weight:600;margin-top:4px}
 
 /* CATEGORIES GRID */
-#cats-section{display:none}
+/* cats-section hidden by JS */
 .cats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px;margin-bottom:10px}
 .cat-card{background:var(--white);border-radius:var(--rm);padding:16px 10px;text-align:center;cursor:pointer;box-shadow:var(--sh);border:2px solid transparent;transition:all .22s}
 .cat-card:hover{border-color:var(--mauve);transform:translateY(-2px)}
@@ -95,7 +95,7 @@ h1,h2,h3,.serif{font-family:"Georgia Pro",Georgia,serif}
 .cat-cnt{font-size:10px;color:var(--tl);margin-top:2px}
 
 /* PRODUCTS GRID */
-#prods-section{display:none}
+/* prods-section hidden by JS */
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
 .p-card{background:var(--white);border-radius:var(--rm);overflow:hidden;cursor:pointer;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s;position:relative}
 .p-card:hover{transform:translateY(-3px);box-shadow:var(--shm)}
@@ -433,7 +433,7 @@ function selectBrand(b){
   document.getElementById('brands-section').style.display='none';
   document.getElementById('prods-section').style.display='none';
   renderCats(b);
-  document.getElementById('cats-section').style.display='';
+  document.getElementById('cats-section').style.display='block';
   document.getElementById('cats-section').classList.add('fade-in');
   window.scrollTo({top:document.getElementById('shop-section').offsetTop-70,behavior:'smooth'});
 }
@@ -462,7 +462,7 @@ function selectCat(cid){
   document.getElementById('step-cat-txt').textContent=cat.name;
   document.getElementById('cats-section').style.display='none';
   renderProds();
-  document.getElementById('prods-section').style.display='';
+  document.getElementById('prods-section').style.display='block';
   document.getElementById('prods-section').classList.add('fade-in');
   window.scrollTo({top:document.getElementById('shop-section').offsetTop-70,behavior:'smooth'});
 }
@@ -496,7 +496,7 @@ function filterSub(s,btn){
 
 function goHome(){
   selBrand=null;selCat=null;selSubcat=null;
-  document.getElementById('brands-section').style.display='';
+  document.getElementById('brands-section').style.display='block';
   document.getElementById('cats-section').style.display='none';
   document.getElementById('prods-section').style.display='none';
   document.getElementById('arr1').style.display='none';
@@ -506,7 +506,7 @@ function goHome(){
 }
 function goCats(){
   selCat=null;selSubcat=null;
-  document.getElementById('cats-section').style.display='';
+  document.getElementById('cats-section').style.display='block';
   document.getElementById('prods-section').style.display='none';
   document.getElementById('arr2').style.display='none';
   document.getElementById('step-cat').style.display='none';
@@ -542,7 +542,7 @@ function onSearch(q){
     document.getElementById('brands-section').style.display='none';
     document.getElementById('cats-section').style.display='none';
     document.getElementById('prods-section').style.display='none';
-    document.getElementById('search-results-section').style.display='';
+    document.getElementById('search-results-section').style.display='block';
     const ql=val.toLowerCase();
     const res=PRODUCTS.filter(p=>(p.name||'').toLowerCase().includes(ql)||(p.brand||'').toLowerCase().includes(ql)||(p.category||'').toLowerCase().includes(ql));
     const noR=document.getElementById('no-results');
@@ -555,8 +555,8 @@ function clearSearch(){
   document.getElementById('srch-inp').value='';
   document.getElementById('search-results-section').style.display='none';
   document.getElementById('brands-section').style.display=selBrand?'none':'';
-  if(selBrand&&!selCat) document.getElementById('cats-section').style.display='';
-  if(selCat) document.getElementById('prods-section').style.display='';
+  if(selBrand&&!selCat) document.getElementById('cats-section').style.display='block';
+  if(selCat) document.getElementById('prods-section').style.display='block';
 }
 
 // ── MODAL ──
@@ -717,7 +717,10 @@ function toast(m,t=''){
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMD();closeCart();}});
 
-// INIT
+// INIT — set explicit display states
+document.getElementById('cats-section').style.display='none';
+document.getElementById('prods-section').style.display='none';
+document.getElementById('search-results-section').style.display='none';
 renderBrands();
 updBadge();
 </script>
