@@ -670,23 +670,33 @@ function sendWA(){
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
   const desc=CFG.descActive?sub*CFG.descPct/100:0;
   const subD=sub-desc;const iva=subD*CFG.iva/100;const total=subD+iva;
-  let msg=`🦋 *Pedido BAILY*
-
-`;
-  cart.forEach(i=>{msg+=`• ${i.name} (${i.brand})
-  x${i.qty} = $${(i.price*i.qty).toFixed(2)}
-`;});
-  msg+=`
-💰 Subtotal: $${sub.toFixed(2)}`;
-  if(CFG.descActive)msg+=`
-🎉 Descuento: -$${desc.toFixed(2)}`;
-  msg+=`
-📊 IVA (${CFG.iva}%): $${iva.toFixed(2)}
-✅ *TOTAL: $${total.toFixed(2)}*
-🏦 Bs. ${(total*(CFG.tasaBCV||47.15)).toFixed(2)}
-
-¡Quiero procesar este pedido! 🛍️`;
+  let msg=`🦋 *Pedido BAILY*\n\n`;
+  cart.forEach(i=>{msg+=`• ${i.name} (${i.brand})\n  x${i.qty} = $${(i.price*i.qty).toFixed(2)}\n`;});
+  msg+=`\n💰 Subtotal: $${sub.toFixed(2)}`;
+  if(CFG.descActive)msg+=`\n🎉 Descuento: -$${desc.toFixed(2)}`;
+  msg+=`\n📊 IVA (${CFG.iva}%): $${iva.toFixed(2)}\n✅ *TOTAL: $${total.toFixed(2)}*\n🏦 Bs. ${(total*(CFG.tasaBCV||47.15)).toFixed(2)}\n\n¡Quiero procesar este pedido! 🛍️`;
+  // Save pending order to localStorage (admin will confirm)
+  const order={
+    id:'ord'+Date.now(),
+    date:new Date().toLocaleString('es-VE'),
+    items:cart.map(i=>({...i})),
+    sub:+sub.toFixed(2),
+    desc:+desc.toFixed(2),
+    iva:+iva.toFixed(2),
+    total:+total.toFixed(2),
+    totalBs:+(total*(CFG.tasaBCV||47.15)).toFixed(2),
+    tasaBCV:CFG.tasaBCV||47.15,
+    status:'pending'
+  };
+  const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
+  orders.unshift(order);
+  localStorage.setItem('baily_orders',JSON.stringify(orders));
+  // Open WhatsApp
   window.open(`https://wa.me/${CFG.wa}?text=${encodeURIComponent(msg)}`,'_blank');
+  // Clear cart
+  cart=[];saveCart();
+  closeCart();
+  toast('¡Pedido enviado a WhatsApp! Espera confirmación del admin 📲','ok');
 }
 
 function togFav(id,btn){
