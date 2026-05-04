@@ -273,7 +273,54 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 .admin-tap-hint.show{opacity:1}
 @keyframes shake2{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
 
+
+/* PROMO SLIDER */
+.promo-wrap{overflow:hidden;position:relative}
+.promo-track{display:flex;transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.promo-slide{min-width:100%;padding:22px 20px 18px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;min-height:118px}
+.promo-slide::after{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}
+.promo-tag{display:inline-flex;align-items:center;gap:5px;background:var(--gold);color:var(--text);font-size:10px;font-weight:700;font-family:system-ui,sans-serif;padding:3px 10px;border-radius:20px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px}
+.promo-txt{color:#fff;font-family:Georgia,serif;font-size:14px;line-height:1.4;max-width:220px}
+.promo-em{font-size:68px;flex-shrink:0;z-index:1;line-height:1}
+.promo-dots{display:flex;gap:6px;justify-content:center;padding:8px;background:rgba(0,0,0,.2)}
+.p-dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.3);transition:all .3s;cursor:pointer;border:none;padding:0}
+.p-dot.on{width:20px;background:#fff}
+.promo-prev,.promo-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:10;transition:background .2s}
+.promo-prev{left:8px}.promo-next{right:8px}
+.promo-prev:hover,.promo-next:hover{background:rgba(255,255,255,.4)}
+
+/* SEC HEADER */
+.sec-hdr{background:var(--mauve);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;margin:20px 20px 14px;border-radius:var(--rm);font-family:Georgia,serif;font-size:15px;font-weight:400;letter-spacing:1px;max-width:1200px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+.sec-wing{opacity:.6;font-size:13px}
+
+/* BLOG */
+.blog-section{max-width:1200px;margin:0 auto;padding:0 20px 40px}
+.blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.blog-card{background:var(--white);border-radius:var(--rm);overflow:hidden;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s;cursor:pointer}
+.blog-card:hover{transform:translateY(-3px);box-shadow:var(--shm)}
+.blog-thumb{width:100%;height:180px;background:var(--cream2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.blog-thumb iframe{width:100%;height:100%;border:none;pointer-events:none}
+.blog-thumb-img{width:100%;height:100%;object-fit:cover}
+.blog-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(44,36,32,.3)}
+.blog-play i{font-size:48px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.blog-no-thumb{font-size:52px;color:var(--tl)}
+.blog-body{padding:14px}
+.blog-cat{font-size:10px;font-weight:700;color:var(--mauve);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.blog-title{font-family:Georgia,serif;font-size:15px;color:var(--text);line-height:1.35;margin-bottom:6px}
+.blog-excerpt{font-size:12px;color:var(--ts);line-height:1.5}
+.blog-date{font-size:11px;color:var(--tl);margin-top:8px}
+
+/* VIDEO MODAL */
+.vid-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:700;display:none;align-items:center;justify-content:center;padding:20px}
+.vid-overlay.open{display:flex}
+.vid-box{background:#000;border-radius:var(--rm);width:100%;max-width:760px;aspect-ratio:16/9;position:relative}
+.vid-box iframe{width:100%;height:100%;border:none;border-radius:var(--rm)}
+.vid-close{position:absolute;top:-40px;right:0;background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+
 </style>
+<script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 productos y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores esta semana", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío nacional gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
+<script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto de mañana a noche.", "date": "2026-05-01", "active": true}, {"id": "bl2", "title": "Tendencias de maquillaje 2026", "category": "Tendencias", "type": "video", "url": "", "thumb": "", "excerpt": "Lo que se lleva esta temporada: piel de vidrio, labios glossy y mucho más.", "date": "2026-04-20", "active": true}]</script>
+
 </head>
 <body>
 
@@ -316,6 +363,31 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 </section>
 
 <!-- SHOP -->
+
+<!-- PROMO SLIDER -->
+<div class="promo-wrap" id="promo-wrap">
+  <div class="promo-track" id="promo-track"></div>
+  <div class="promo-dots" id="promo-dots"></div>
+  <button class="promo-prev" onclick="promoNav(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+  <button class="promo-next" onclick="promoNav(1)"><i class="fa-solid fa-chevron-right"></i></button>
+</div>
+
+<!-- BLOG & VIDEOS -->
+<div id="blog-wrap" style="display:none">
+  <div class="sec-hdr"><span class="sec-wing">✦</span><span id="blog-sec-title">Blog & Tutoriales</span><span class="sec-wing">✦</span></div>
+  <div class="blog-section">
+    <div class="blog-grid" id="blog-grid"></div>
+  </div>
+</div>
+
+<!-- VIDEO MODAL -->
+<div class="vid-overlay" id="vid-overlay" onclick="if(event.target===this)closeVid()">
+  <div class="vid-box">
+    <button class="vid-close" onclick="closeVid()"><i class="fa-solid fa-xmark"></i></button>
+    <iframe id="vid-frame" allowfullscreen></iframe>
+  </div>
+</div>
+
 <main id="shop-section" class="shop">
   <!-- BREADCRUMB -->
   <div class="steps" id="steps">
@@ -760,6 +832,8 @@ function closeCart(){
 }
 
 function renderCart(){
+  // Always read freshest config from localStorage
+  try{const _s=JSON.parse(localStorage.getItem(CK)||'{}');Object.assign(CFG,CFG_DEFAULT,_s);}catch(e){}
   const iEl=document.getElementById('c-items');
   const fEl=document.getElementById('c-foot');
   if(!cart.length){
@@ -785,6 +859,9 @@ function renderCart(){
   const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
   const subD=sub-desc;
   const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
+  // Read fresh CFG from localStorage so admin changes take effect immediately
+  const _freshCFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
+  Object.assign(CFG,_freshCFG);
   const iva=subD*(CFG.iva||16)/100;
   const total=subD+envio+iva;
   const tasa=CFG.tasaBCV||47.15;
@@ -1014,6 +1091,9 @@ function submitOrder(){
   const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
   const subD=sub-desc;
   const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
+  // Read fresh CFG from localStorage so admin changes take effect immediately
+  const _freshCFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
+  Object.assign(CFG,_freshCFG);
   const iva=subD*(CFG.iva||16)/100;
   const total=subD+envio+iva;
   const tasa=CFG.tasaBCV||47.15;
@@ -1102,6 +1182,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMD();closeCart
 // INIT
 renderBrands();
 updBadge();
+renderPromoSlider();
+renderBlog();
 
 
 // ═══════════════════════════════════════════
@@ -1355,6 +1437,127 @@ document.addEventListener('click', e => {
     if (sug) { sug.style.display = 'none'; }
   }
 });
+
+
+// ═══════════════════════════════════════════
+// DATA HELPERS
+// ═══════════════════════════════════════════
+const PROMO_KEY = 'baily_promos_v1';
+const BLOG_KEY  = 'baily_blog_v1';
+
+function getDefaultPromos() {
+  try { return JSON.parse(document.getElementById('default-promos').textContent); } catch(e) { return []; }
+}
+function getDefaultBlog() {
+  try { return JSON.parse(document.getElementById('default-blog').textContent); } catch(e) { return []; }
+}
+function getPromos() {
+  try {
+    const s = localStorage.getItem(PROMO_KEY);
+    return s ? JSON.parse(s) : getDefaultPromos();
+  } catch(e) { return getDefaultPromos(); }
+}
+function getBlog() {
+  try {
+    const s = localStorage.getItem(BLOG_KEY);
+    return s ? JSON.parse(s) : getDefaultBlog();
+  } catch(e) { return getDefaultBlog(); }
+}
+
+// ═══════════════════════════════════════════
+// PROMO SLIDER
+// ═══════════════════════════════════════════
+let promoI = 0, promoTimer = null;
+
+function renderPromoSlider() {
+  const promos = getPromos().filter(p => p.active !== false);
+  const track = document.getElementById('promo-track');
+  const dots  = document.getElementById('promo-dots');
+  const wrap  = document.getElementById('promo-wrap');
+  if (!track || !promos.length) { if(wrap) wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+
+  track.innerHTML = promos.map(p => `
+    <div class="promo-slide" style="background:${p.color||'linear-gradient(140deg,#6E6070,#8F7F8A)'}">
+      <div>
+        <div class="promo-tag">${p.tag||''}</div>
+        <div class="promo-txt">${p.title||''}</div>
+      </div>
+      <div class="promo-em">${p.emoji||'✨'}</div>
+    </div>`).join('');
+
+  dots.innerHTML = promos.map((_, i) =>
+    `<button class="p-dot ${i===0?'on':''}" onclick="goPromo(${i})"></button>`
+  ).join('');
+
+  promoI = 0;
+  clearInterval(promoTimer);
+  if (promos.length > 1) {
+    promoTimer = setInterval(() => goPromo((promoI+1) % promos.length), 4200);
+  }
+}
+
+function goPromo(i) {
+  const promos = getPromos().filter(p => p.active !== false);
+  promoI = (i + promos.length) % promos.length;
+  const track = document.getElementById('promo-track');
+  if (track) track.style.transform = `translateX(-${promoI*100}%)`;
+  document.querySelectorAll('.p-dot').forEach((d,j) => d.classList.toggle('on', j===promoI));
+}
+
+function promoNav(dir) {
+  const promos = getPromos().filter(p => p.active !== false);
+  clearInterval(promoTimer);
+  goPromo(promoI + dir);
+  promoTimer = setInterval(() => goPromo((promoI+1) % promos.length), 4200);
+}
+
+// ═══════════════════════════════════════════
+// BLOG & VIDEOS
+// ═══════════════════════════════════════════
+function renderBlog() {
+  const posts = getBlog().filter(p => p.active !== false);
+  const wrap  = document.getElementById('blog-wrap');
+  const grid  = document.getElementById('blog-grid');
+  if (!wrap || !grid) return;
+
+  if (!posts.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  grid.innerHTML = posts.map(p => {
+    const hasVideo = p.url && p.url.includes('youtube');
+    const thumbHtml = hasVideo
+      ? `<div class="blog-play"><i class="fa-solid fa-circle-play"></i></div>`
+      : p.thumb
+        ? `<img class="blog-thumb-img" src="${p.thumb}" alt="${p.title}">`
+        : `<span class="blog-no-thumb">${p.category==='Tutorial'?'🎬':p.category==='Curso'?'📚':'✨'}</span>`;
+
+    return `<div class="blog-card" onclick="${hasVideo?`openVid('${p.url}')`:``}">
+      <div class="blog-thumb">${thumbHtml}</div>
+      <div class="blog-body">
+        <div class="blog-cat">${p.category||''}</div>
+        <div class="blog-title">${p.title}</div>
+        <div class="blog-excerpt">${p.excerpt||''}</div>
+        <div class="blog-date">${p.date||''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openVid(url) {
+  // Convert youtube watch URL to embed if needed
+  let embed = url;
+  if (url.includes('watch?v=')) embed = url.replace('watch?v=', 'embed/').split('&')[0];
+  else if (url.includes('youtu.be/')) embed = 'https://www.youtube.com/embed/' + url.split('youtu.be/')[1].split('?')[0];
+  document.getElementById('vid-frame').src = embed + '?autoplay=1';
+  document.getElementById('vid-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeVid() {
+  document.getElementById('vid-frame').src = '';
+  document.getElementById('vid-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
 
 </script>
 
