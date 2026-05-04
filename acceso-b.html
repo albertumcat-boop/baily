@@ -1162,23 +1162,39 @@ function removePhoto(id) {
 // SETTINGS
 // ════════════════════════════════════════════════
 function renderSettings() {
-  document.getElementById('s-tasa').value = CFG.tasaBCV   || 47.15;
-  document.getElementById('s-iva').value  = CFG.iva       || 16;
-  document.getElementById('s-don').checked= !!CFG.descActive;
-  document.getElementById('s-dpct').value = CFG.descPct   || 35;
-  document.getElementById('s-del').value  = CFG.deliveryCost  || 3;
-  document.getElementById('s-free').value = CFG.freeThreshold || 30;
-  document.getElementById('s-wa').value   = CFG.wa        || '+584242655274';
+  // Always re-read from localStorage to show the most current saved values
+  try {
+    const saved = JSON.parse(localStorage.getItem(CK) || '{}');
+    Object.assign(CFG, CFG_DEFAULT, saved); // merge: saved values win over defaults
+  } catch(e) {}
+  document.getElementById('s-tasa').value  = CFG.tasaBCV !== undefined ? CFG.tasaBCV : 47.15;
+  document.getElementById('s-iva').value   = CFG.iva !== undefined ? CFG.iva : 16;
+  document.getElementById('s-don').checked = !!CFG.descActive;
+  document.getElementById('s-dpct').value  = CFG.descPct !== undefined ? CFG.descPct : 35;
+  document.getElementById('s-del').value   = CFG.deliveryCost !== undefined ? CFG.deliveryCost : 3;
+  document.getElementById('s-free').value  = CFG.freeThreshold !== undefined ? CFG.freeThreshold : 30;
+  document.getElementById('s-wa').value    = CFG.wa || '+584242655274';
 }
 function saveSF(key, inpId, isNum) {
   const raw = document.getElementById(inpId).value;
-  CFG[key] = isNum ? parseFloat(raw) : raw;
-  saveCfg(); toast('Guardado ✓', 'ok');
+  const val = isNum ? parseFloat(raw) : raw;
+  // Merge with existing localStorage to not lose any other keys
+  const existing = JSON.parse(localStorage.getItem(CK) || '{}');
+  existing[key] = val;
+  CFG[key] = val;
+  localStorage.setItem(CK, JSON.stringify(existing));
+  toast('Guardado ✓', 'ok');
+  renderSettings(); // Re-render to confirm saved value
 }
 function saveDisc() {
-  CFG.descActive = document.getElementById('s-don').checked;
-  CFG.descPct    = parseFloat(document.getElementById('s-dpct').value) || 35;
-  saveCfg(); toast('Descuento actualizado ✓', 'ok');
+  const existing = JSON.parse(localStorage.getItem(CK) || '{}');
+  existing.descActive = document.getElementById('s-don').checked;
+  existing.descPct    = parseFloat(document.getElementById('s-dpct').value) || 35;
+  CFG.descActive = existing.descActive;
+  CFG.descPct    = existing.descPct;
+  localStorage.setItem(CK, JSON.stringify(existing));
+  toast('Descuento actualizado ✓', 'ok');
+  renderSettings();
 }
 
 // ════════════════════════════════════════════════
