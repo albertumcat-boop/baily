@@ -244,7 +244,27 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 .fin-empty{text-align:center;padding:50px 20px;color:var(--tl)}
 .fin-empty i{font-size:44px;color:var(--mp);display:block;margin-bottom:12px}
 
+
+/* PROMO & BLOG ADMIN */
+.promo-preview{border-radius:var(--rm);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:relative;overflow:hidden;min-height:80px}
+.promo-preview::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)}
+.pp-content{flex:1}
+.pp-tag{display:inline-block;background:var(--gold);color:var(--text);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-bottom:4px;font-family:system-ui,sans-serif}
+.pp-title{color:#fff;font-family:Georgia,serif;font-size:13px;line-height:1.3}
+.pp-em{font-size:44px;flex-shrink:0;z-index:1}
+.pp-actions{display:flex;gap:6px;margin-top:8px}
+.blog-admin-card{background:var(--white);border-radius:var(--rm);border:var(--border);padding:14px;margin-bottom:12px;display:flex;gap:14px;box-shadow:var(--sh)}
+.bac-thumb{width:80px;height:60px;border-radius:var(--r);background:var(--cream2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.bac-thumb img{width:100%;height:100%;object-fit:cover}
+.bac-info{flex:1;min-width:0}
+.bac-cat{font-size:10px;color:var(--mauve);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.bac-title{font-family:Georgia,serif;font-size:14px;color:var(--md);margin-bottom:3px}
+.bac-url{font-size:11px;color:var(--tl);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 </style>
+<script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
+<script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto.", "date": "2026-05-01", "active": true}]</script>
+
 </head>
 <body>
 
@@ -289,6 +309,8 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     <button class="sb-btn" onclick="goPg('photos',this)"><i class="fa-solid fa-images"></i>Fotos</button>
     <button class="sb-btn" onclick="goPg('finanzas',this)"><i class="fa-solid fa-chart-line"></i>Finanzas</button>
     <button class="sb-btn" onclick="goPg('customers',this)"><i class="fa-solid fa-users"></i>Clientes</button>
+    <button class="sb-btn" onclick="goPg('promos',this)"><i class="fa-solid fa-bullhorn"></i>Promos</button>
+    <button class="sb-btn" onclick="goPg('blog',this)"><i class="fa-solid fa-video"></i>Blog & Videos</button>
     <div class="sb-sec">Sistema</div>
     <button class="sb-btn" onclick="goPg('settings',this)"><i class="fa-solid fa-sliders"></i>Configuración</button>
   </nav>
@@ -464,6 +486,25 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
       </div>
     </div>
 
+
+    <!-- PROMOS -->
+    <div class="pg" id="pg-promos">
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
+        <button class="btn bp" onclick="openAddPromo()"><i class="fa-solid fa-plus"></i> Nueva Promo</button>
+        <span style="font-size:12px;color:var(--ts)">Los banners aparecen en el slider principal de la tienda</span>
+      </div>
+      <div id="promos-list"></div>
+    </div>
+
+    <!-- BLOG & VIDEOS -->
+    <div class="pg" id="pg-blog">
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
+        <button class="btn bp" onclick="openAddPost()"><i class="fa-solid fa-plus"></i> Nuevo Post / Video</button>
+        <span style="font-size:12px;color:var(--ts)">Agrega tutoriales, videos de YouTube o cursos</span>
+      </div>
+      <div id="blog-admin-list"></div>
+    </div>
+
     <!-- CUSTOMERS -->
     <div class="pg" id="pg-customers">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
@@ -616,6 +657,77 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
   </div>
 </div>
 
+
+<!-- MODAL: Nueva Promo -->
+<div class="mbg" id="pm2-bg" onclick="if(event.target===this)closePM2()">
+  <div class="mbox" style="max-width:480px">
+    <div class="m-ttl"><span id="pm2-ttl">Nueva Promo</span><button class="mx" onclick="closePM2()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fg">
+      <div class="fgrp full"><span class="flbl">Título *</span><input class="finp" type="text" id="pm2-title" placeholder="Ej: 35% OFF en bases esta semana"></div>
+      <div class="fgrp"><span class="flbl">Etiqueta (tag)</span><input class="finp" type="text" id="pm2-tag" placeholder="⚡ PROMO FLASH"></div>
+      <div class="fgrp"><span class="flbl">Emoji</span><input class="finp" type="text" id="pm2-emoji" placeholder="💄" maxlength="4"></div>
+      <div class="fgrp full">
+        <span class="flbl">Color de fondo (CSS)</span>
+        <input class="finp" type="text" id="pm2-color" placeholder="linear-gradient(140deg,#6E6070,#8F7F8A)">
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <button class="mb edit" onclick="setPColor('linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)')">🟣 Mauve</button>
+          <button class="mb edit" onclick="setPColor('linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)')">💜 Lila</button>
+          <button class="mb edit" onclick="setPColor('linear-gradient(140deg,#4A3060,#7A6080,#9080A0)')">🫐 Oscuro</button>
+          <button class="mb edit" onclick="setPColor('linear-gradient(140deg,#6B4040,#A07060,#C09080)')">🌹 Rosa</button>
+        </div>
+      </div>
+      <div class="fgrp row"><span class="flbl">Activa</span><label class="tg"><input type="checkbox" id="pm2-active" checked><span class="tg-sl"></span></label></div>
+      <input type="hidden" id="pm2-eid">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn bs" onclick="closePM2()">Cancelar</button>
+      <button class="btn bp" onclick="savePromo()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo Post/Video -->
+<div class="mbg" id="bp-bg" onclick="if(event.target===this)closeBP()">
+  <div class="mbox" style="max-width:520px">
+    <div class="m-ttl"><span id="bp-ttl">Nuevo Post / Video</span><button class="mx" onclick="closeBP()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fg">
+      <div class="fgrp full"><span class="flbl">Título *</span><input class="finp" type="text" id="bp-title" placeholder="Ej: Tutorial: cómo aplicar la base perfecta"></div>
+      <div class="fgrp"><span class="flbl">Categoría</span>
+        <select class="fsel" id="bp-cat">
+          <option value="Tutorial">🎬 Tutorial</option>
+          <option value="Curso">📚 Curso</option>
+          <option value="Tendencias">✨ Tendencias</option>
+          <option value="Promoción">🎁 Promoción</option>
+          <option value="Otro">📌 Otro</option>
+        </select>
+      </div>
+      <div class="fgrp full">
+        <span class="flbl">URL de YouTube (opcional)</span>
+        <input class="finp" type="url" id="bp-url" placeholder="https://www.youtube.com/watch?v=...">
+        <div style="font-size:11px;color:var(--tl);margin-top:3px">Pega el link del video. También acepta links cortos youtu.be/...</div>
+      </div>
+      <div class="fgrp full">
+        <span class="flbl">Imagen de portada (si no hay video)</span>
+        <div class="uparea" style="padding:14px">
+          <input type="file" accept="image/*" onchange="handleImg(this,'bp-prev','bp-thumb')">
+          <i class="fa-solid fa-image" style="font-size:20px;color:var(--tl);display:block;margin-bottom:4px"></i>
+          <div style="font-size:12px;color:var(--ts)">Subir imagen de portada</div>
+          <img id="bp-prev" class="up-prev" style="max-height:100px">
+        </div>
+        <input type="hidden" id="bp-thumb">
+      </div>
+      <div class="fgrp full"><span class="flbl">Descripción</span><textarea class="finp" id="bp-excerpt" placeholder="Breve descripción del contenido..."></textarea></div>
+      <div class="fgrp"><span class="flbl">Fecha</span><input class="finp" type="date" id="bp-date"></div>
+      <div class="fgrp row"><span class="flbl">Publicado</span><label class="tg"><input type="checkbox" id="bp-active" checked><span class="tg-sl"></span></label></div>
+      <input type="hidden" id="bp-eid">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn bs" onclick="closeBP()">Cancelar</button>
+      <button class="btn bp" onclick="savePost()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -736,6 +848,8 @@ function renderPage(name) {
   const map = {
     dashboard:  renderDash,
     orders:     renderOrders,
+    promos:     renderPromos,
+    blog:       renderBlogAdmin,
     finanzas:   renderFinanzas,
     customers:  renderCustomers,
     inventory:  () => { invPage = 1; renderInv(); },
@@ -1826,6 +1940,182 @@ function exportFinanzas() {
   const period = finPeriod === 'all' ? 'completo' : finPeriod;
   a.download = `baily_ventas_${period}_${new Date().toLocaleDateString('es-VE').replace(/\//g,'-')}.csv`;
   a.click(); toast('CSV exportado ✓', 'ok');
+}
+
+
+// ════════════════════════════════════════════════
+// PROMOS & BLOG MANAGEMENT
+// ════════════════════════════════════════════════
+const PROMO_KEY = 'baily_promos_v1';
+const BLOG_KEY  = 'baily_blog_v1';
+
+function getDefaultPromos() { try { return JSON.parse(document.getElementById('default-promos').textContent); } catch(e) { return []; } }
+function getDefaultBlog()   { try { return JSON.parse(document.getElementById('default-blog').textContent); }   catch(e) { return []; } }
+
+function getPromos() {
+  try { const s = localStorage.getItem(PROMO_KEY); return s ? JSON.parse(s) : getDefaultPromos(); } catch(e) { return getDefaultPromos(); }
+}
+function savePromos(data) { localStorage.setItem(PROMO_KEY, JSON.stringify(data)); }
+
+function getBlogPosts() {
+  try { const s = localStorage.getItem(BLOG_KEY); return s ? JSON.parse(s) : getDefaultBlog(); } catch(e) { return getDefaultBlog(); }
+}
+function saveBlogPosts(data) { localStorage.setItem(BLOG_KEY, JSON.stringify(data)); }
+
+// ── PROMOS ──
+function renderPromos() {
+  const promos = getPromos();
+  const el = document.getElementById('promos-list');
+  if (!el) return;
+  if (!promos.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tl)">Sin banners. Agrega tu primera promo.</div>';
+    return;
+  }
+  el.innerHTML = promos.map((p, i) => `
+    <div class="promo-preview" style="background:${p.color||'linear-gradient(140deg,#6E6070,#8F7F8A)'}">
+      <div class="pp-content">
+        <div class="pp-tag">${p.tag||''}</div>
+        <div class="pp-title">${p.title||''}</div>
+        <div class="pp-actions">
+          <button class="mb edit" onclick="editPromo(${i})"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="mb ok"   onclick="togglePromo(${i})">${p.active!==false?'<i class="fa-solid fa-eye"></i> Activa':'<i class="fa-solid fa-eye-slash"></i> Oculta'}</button>
+          <button class="mb del"  onclick="deletePromo(${i})"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="pp-em">${p.emoji||'✨'}</div>
+    </div>`).join('');
+}
+
+function openAddPromo() {
+  ['pm2-title','pm2-tag','pm2-emoji','pm2-color'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pm2-active').checked = true;
+  document.getElementById('pm2-eid').value = '';
+  document.getElementById('pm2-ttl').textContent = 'Nueva Promo';
+  document.getElementById('pm2-bg').classList.add('on');
+}
+function editPromo(i) {
+  const p = getPromos()[i];
+  document.getElementById('pm2-title').value  = p.title||'';
+  document.getElementById('pm2-tag').value    = p.tag||'';
+  document.getElementById('pm2-emoji').value  = p.emoji||'';
+  document.getElementById('pm2-color').value  = p.color||'';
+  document.getElementById('pm2-active').checked = p.active !== false;
+  document.getElementById('pm2-eid').value    = i;
+  document.getElementById('pm2-ttl').textContent = 'Editar Promo';
+  document.getElementById('pm2-bg').classList.add('on');
+}
+function setPColor(c) { document.getElementById('pm2-color').value = c; }
+function closePM2() { document.getElementById('pm2-bg').classList.remove('on'); }
+
+function savePromo() {
+  const title = document.getElementById('pm2-title').value.trim();
+  if (!title) { toast('Ingresa el título', 'err'); return; }
+  const data = {
+    id: 'pr' + Date.now(),
+    title,
+    tag:    document.getElementById('pm2-tag').value.trim(),
+    emoji:  document.getElementById('pm2-emoji').value.trim() || '✨',
+    color:  document.getElementById('pm2-color').value.trim() || 'linear-gradient(140deg,#6E6070,#8F7F8A)',
+    active: document.getElementById('pm2-active').checked
+  };
+  const promos = getPromos();
+  const eid = document.getElementById('pm2-eid').value;
+  if (eid !== '') { promos[parseInt(eid)] = {...promos[parseInt(eid)], ...data}; }
+  else { promos.push(data); }
+  savePromos(promos);
+  closePM2(); renderPromos(); toast('Promo guardada ✓', 'ok');
+}
+function togglePromo(i) {
+  const promos = getPromos();
+  promos[i].active = promos[i].active === false ? true : false;
+  savePromos(promos); renderPromos();
+}
+function deletePromo(i) {
+  if (!confirm('¿Eliminar este banner?')) return;
+  const promos = getPromos(); promos.splice(i, 1);
+  savePromos(promos); renderPromos(); toast('Banner eliminado', 'ok');
+}
+
+// ── BLOG & VIDEOS ──
+function renderBlogAdmin() {
+  const posts = getBlogPosts();
+  const el = document.getElementById('blog-admin-list');
+  if (!el) return;
+  if (!posts.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tl)">Sin posts. Agrega tu primer contenido.</div>';
+    return;
+  }
+  el.innerHTML = posts.map((p, i) => `
+    <div class="blog-admin-card">
+      <div class="bac-thumb">${p.thumb ? `<img src="${p.thumb}">` : p.category==='Tutorial'?'🎬':p.category==='Curso'?'📚':'✨'}</div>
+      <div class="bac-info">
+        <div class="bac-cat">${p.category||''} ${p.active===false?'· <span style="color:var(--err)">Oculto</span>':'· <span style="color:var(--ok)">Publicado</span>'}</div>
+        <div class="bac-title">${p.title}</div>
+        <div class="bac-url">${p.url||'Sin video · '+p.date||''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <button class="mb edit" onclick="editPost(${i})"><i class="fa-solid fa-pen"></i></button>
+        <button class="mb ok"   onclick="togglePost(${i})">${p.active!==false?'👁️':'🙈'}</button>
+        <button class="mb del"  onclick="deletePost(${i})"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+function openAddPost() {
+  ['bp-title','bp-url','bp-excerpt','bp-thumb'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('bp-active').checked = true;
+  document.getElementById('bp-eid').value = '';
+  document.getElementById('bp-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bp-prev').style.display = 'none';
+  document.getElementById('bp-ttl').textContent = 'Nuevo Post / Video';
+  document.getElementById('bp-bg').classList.add('on');
+}
+function editPost(i) {
+  const p = getBlogPosts()[i];
+  document.getElementById('bp-title').value   = p.title||'';
+  document.getElementById('bp-cat').value     = p.category||'Tutorial';
+  document.getElementById('bp-url').value     = p.url||'';
+  document.getElementById('bp-excerpt').value = p.excerpt||'';
+  document.getElementById('bp-date').value    = p.date||'';
+  document.getElementById('bp-thumb').value   = p.thumb||'';
+  document.getElementById('bp-active').checked = p.active !== false;
+  document.getElementById('bp-eid').value     = i;
+  document.getElementById('bp-ttl').textContent = 'Editar Post';
+  const prev = document.getElementById('bp-prev');
+  if (p.thumb) { prev.src = p.thumb; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+  document.getElementById('bp-bg').classList.add('on');
+}
+function closeBP() { document.getElementById('bp-bg').classList.remove('on'); }
+
+function savePost() {
+  const title = document.getElementById('bp-title').value.trim();
+  if (!title) { toast('Ingresa el título', 'err'); return; }
+  const data = {
+    id:       'bl' + Date.now(),
+    title,
+    category: document.getElementById('bp-cat').value,
+    url:      document.getElementById('bp-url').value.trim(),
+    thumb:    document.getElementById('bp-thumb').value,
+    excerpt:  document.getElementById('bp-excerpt').value.trim(),
+    date:     document.getElementById('bp-date').value,
+    active:   document.getElementById('bp-active').checked,
+    type:     'video'
+  };
+  const posts = getBlogPosts();
+  const eid = document.getElementById('bp-eid').value;
+  if (eid !== '') { posts[parseInt(eid)] = {...posts[parseInt(eid)], ...data}; }
+  else { posts.unshift(data); }
+  saveBlogPosts(posts);
+  closeBP(); renderBlogAdmin(); toast('Post guardado ✓', 'ok');
+}
+function togglePost(i) {
+  const posts = getBlogPosts(); posts[i].active = posts[i].active === false;
+  saveBlogPosts(posts); renderBlogAdmin();
+}
+function deletePost(i) {
+  if (!confirm('¿Eliminar este post?')) return;
+  const posts = getBlogPosts(); posts.splice(i, 1);
+  saveBlogPosts(posts); renderBlogAdmin(); toast('Post eliminado', 'ok');
 }
 
 </script>
