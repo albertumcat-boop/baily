@@ -627,14 +627,21 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
       <div class="fgrp"><span class="flbl">Tamaño</span><input class="finp" type="text" id="pm-sz" placeholder="30ml, 3g, Kit..."></div>
       <div class="fgrp full"><span class="flbl">Descripción</span><textarea class="finp" id="pm-desc" placeholder="Descripción del producto..."></textarea></div>
       <div class="fgrp full">
-        <span class="flbl">Foto del producto</span>
-        <div class="uparea">
-          <input type="file" accept="image/*" id="pm-file" onchange="handleImg(this,'pm-prev','pm-img')">
-          <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px;color:var(--tl);display:block;margin-bottom:6px"></i>
-          <div style="font-size:13px;color:var(--ts)">Clic o arrastra para subir foto</div>
-          <div style="font-size:11px;color:var(--tl);margin-top:2px">JPG, PNG, WEBP · máx 3MB</div>
-          <img id="pm-prev" class="up-prev">
+        <span class="flbl">Fotos del producto (hasta 5)</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;margin-top:6px">
+          <label class="btn bs btn-sm" style="cursor:pointer;display:inline-flex;gap:6px">
+            <i class="fa-solid fa-camera"></i> Tomar / Subir foto
+            <input type="file" accept="image/*" multiple capture="environment" id="pm-files" style="display:none" onchange="handleMultiImg(this)">
+          </label>
+          <button class="btn bs btn-sm" type="button" onclick="openImgBrowser('pm')">
+            <i class="fa-solid fa-images"></i> Usar foto de galería
+          </button>
         </div>
+        <div style="font-size:11px;color:var(--ok);margin-bottom:10px">
+          <i class="fa-solid fa-compress"></i> Se comprimen automáticamente · máx ~250KB por foto
+        </div>
+        <div id="pm-imgs-preview" style="display:flex;gap:8px;flex-wrap:wrap;min-height:40px"></div>
+        <input type="hidden" id="pm-imgs-data" value="[]">
         <input type="hidden" id="pm-img">
         <input type="hidden" id="pm-eid">
       </div>
@@ -1119,11 +1126,12 @@ function editP(id) {
   document.getElementById('pm-desc').value = p.desc    || '';
   document.getElementById('pm-feat').checked = !!p.featured;
   document.getElementById('pm-best').checked = !!p.bestseller;
-  document.getElementById('pm-img').value  = p.img     || '';
-  document.getElementById('pm-eid').value  = id;
-  const prev = document.getElementById('pm-prev');
-  if (p.img) { prev.src = p.img; prev.style.display = 'block'; }
-  else { prev.style.display = 'none'; prev.src = ''; }
+  const _ims = Array.isArray(p.imgs) && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+  document.getElementById('pm-imgs-data').value = JSON.stringify(_ims);
+  document.getElementById('pm-img').value = _ims[0] || '';
+  document.getElementById('pm-eid').value = id;
+  renderImgPreviews(_ims);
+  
   fillPMSelects();
   // Set selects after they are rendered
   setTimeout(() => {
