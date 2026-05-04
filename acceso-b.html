@@ -945,7 +945,7 @@ function renderInv() {
         <button class="mb ok" onclick="setPr('${p.id}')">✓</button>
       </div>
     </td>
-    <td style="font-size:11px;color:var(--tl)">Bs ${((+p.price||0)*(CFG.tasaBCV||47.15)).toFixed(2)}</td>
+    <td style="font-size:11px;color:var(--tl)">Bs ${((+p.price||0)*(CFG.tasaBCV??47.15)).toFixed(2)}</td>
   </tr>`).join('');
 
   let ph = '';
@@ -1280,11 +1280,11 @@ function renderSettings() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
   // Show saved value if exists, otherwise show current CFG value, otherwise default
-  document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV  ?? 47.15;
-  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva      ?? 16;
+  document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV ?? 47.15;
+  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva ?? 16;
   document.getElementById('s-don').checked = saved.descActive !== undefined ? !!saved.descActive : !!CFG.descActive;
-  document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct  ?? 35;
-  document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost  ?? 3;
+  document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct ?? 35;
+  document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 3;
   document.getElementById('s-free').value  = saved.freeThreshold ?? CFG.freeThreshold ?? 30;
   document.getElementById('s-wa').value    = saved.wa || CFG.wa || '+584242655274';
   // Sync CFG with saved values
@@ -1803,7 +1803,7 @@ function renderFinanzas() {
   const totalEnvio   = orders.reduce((s, o) => s + (o.envio || 0), 0);
   const totalItems   = orders.reduce((s, o) => s + (o.items || []).reduce((si, i) => si + (i.qty || 1), 0), 0);
   const avgTicket    = orders.length ? totalVentas / orders.length : 0;
-  const tasaPromedio = orders.length ? (orders.reduce((s, o) => s + (o.tasaBCV || 47.15), 0) / orders.length) : (CFG.tasaBCV || 47.15);
+  const tasaPromedio = orders.length ? (orders.reduce((s, o) => s + (o.tasaBCV || 47.15), 0) / orders.length) : (CFG.tasaBCV ?? 47.15);
 
   document.getElementById('fin-kpis').innerHTML = `
     <div class="kpi green">
