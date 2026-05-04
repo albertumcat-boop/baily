@@ -832,8 +832,12 @@ function closeCart(){
 }
 
 function renderCart(){
-  // Always read freshest config from localStorage
-  try{const _s=JSON.parse(localStorage.getItem(CK)||'{}');Object.assign(CFG,CFG_DEFAULT,_s);}catch(e){}
+  // Read config fresh from localStorage
+  try{
+    const _raw = localStorage.getItem(CK);
+    if(_raw){ const _s=JSON.parse(_raw); for(const k in _s) CFG[k]=_s[k]; }
+    console.log('[BAILY] CFG loaded:', JSON.stringify(CFG));
+  }catch(e){ console.log('[BAILY] CFG read error',e); }
   const iEl=document.getElementById('c-items');
   const fEl=document.getElementById('c-foot');
   if(!cart.length){
@@ -859,9 +863,6 @@ function renderCart(){
   const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
   const subD=sub-desc;
   const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
-  // Read fresh CFG from localStorage so admin changes take effect immediately
-  const _freshCFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
-  Object.assign(CFG,_freshCFG);
   const iva=subD*(CFG.iva||16)/100;
   const total=subD+envio+iva;
   const tasa=CFG.tasaBCV||47.15;
@@ -921,7 +922,7 @@ function renderCart(){
     <div class="c-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
     ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct||35}%)</span><span>−$${desc.toFixed(2)}</span></div>`:''}
     <div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>
-    <div class="c-row"><span>IVA (${CFG.iva||16}%)</span><span>$${iva.toFixed(2)}</span></div>
+    <div class="c-row"><span>IVA (${CFG.iva}%)</span><span>$${iva.toFixed(2)}</span></div>
     <div class="c-row tot">
       <span>Total</span>
       <div style="text-align:right"><div>$${total.toFixed(2)}</div><div class="c-tbs">Bs. ${(total*tasa).toFixed(2)}</div></div>
@@ -1091,9 +1092,6 @@ function submitOrder(){
   const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
   const subD=sub-desc;
   const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
-  // Read fresh CFG from localStorage so admin changes take effect immediately
-  const _freshCFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
-  Object.assign(CFG,_freshCFG);
   const iva=subD*(CFG.iva||16)/100;
   const total=subD+envio+iva;
   const tasa=CFG.tasaBCV||47.15;
