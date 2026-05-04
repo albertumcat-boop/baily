@@ -1307,6 +1307,7 @@ function saveSF(key, inpId, isNum) {
   // Verify it was saved
   let verify = {};
   try { verify = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  console.log('[BAILY ADMIN] Saved:', key, '=', val, '| Full CFG:', JSON.stringify(verify));
   if (verify[key] == val) {
     toast(`✅ ${key} guardado: ${val}`, 'ok');
   } else {
