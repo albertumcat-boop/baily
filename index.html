@@ -590,7 +590,7 @@ async function fetchTasaBCV(){
   }
   // Fallback: show stored rate
   const el = document.getElementById('tasa-display');
-  if(el) el.textContent = `Bs. ${(CFG.tasaBCV||47.15).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})} / $ (guardada)`;
+  if(el) el.textContent = `Bs. ${(CFG.tasaBCV??47.15).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})} / $ (guardada)`;
 }
 
 fetchTasaBCV();
@@ -640,7 +640,7 @@ function selectBrand(b){
   renderCats(b);
   document.getElementById('cats-section').style.display='block';
   document.getElementById('cats-section').classList.add('fade-in');
-  window.scrollTo({top:document.getElementById('shop-section').offsetTop-70,behavior:'smooth'});
+  setTimeout(()=>document.getElementById('cats-section').scrollIntoView({behavior:'smooth',block:'start'}),50);
 }
 
 function renderCats(brand){
@@ -669,7 +669,7 @@ function selectCat(cid){
   renderProds();
   document.getElementById('prods-section').style.display='block';
   document.getElementById('prods-section').classList.add('fade-in');
-  window.scrollTo({top:document.getElementById('shop-section').offsetTop-70,behavior:'smooth'});
+  setTimeout(()=>document.getElementById('prods-section').scrollIntoView({behavior:'smooth',block:'start'}),50);
 }
 
 function renderProds(){
@@ -721,7 +721,7 @@ function goCats(){
 function pCard(p){
   const fav=favs.includes(p.id),out=(+p.stock||0)<=0,low=(+p.stock||0)>0&&(+p.stock||0)<=3;
   const badge=p.bestseller?'MÁS VENDIDO':(p.featured?'DESTACADO':'');
-  const tasa=CFG.tasaBCV||47.15;
+  const tasa=CFG.tasaBCV??47.15;
   return `<div class="p-card ${out?'sold-out':''}" onclick="openM('${p.id}')">
     <div class="p-img">${p.img?`<img src="${p.img}" onerror="this.style.display='none'">`:`${CATS[p.catId]?.icon||'💄'}`}</div>
     ${badge?`<div class="p-badge">${badge}</div>`:''}
@@ -739,7 +739,7 @@ function pCard(p){
 function openM(id){
   const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
   curP=p;curQty=1;
-  const out=(+p.stock||0)<=0,tasa=CFG.tasaBCV||47.15;
+  const out=(+p.stock||0)<=0,tasa=CFG.tasaBCV??47.15;
   document.getElementById('m-img').innerHTML=`<button class="m-close" onclick="closeMD()"><i class="fa-solid fa-xmark"></i></button>${p.img?`<img src="${p.img}">`:`<span>${CATS[p.catId]?.icon||'💄'}</span>`}`;
   document.getElementById('m-body').innerHTML=`
     <div class="m-br">${p.brand}</div>
@@ -849,7 +849,7 @@ function renderCart(){
     <div class="ci-info">
       <div class="ci-br">${it.brand}</div>
       <div class="ci-nm">${it.name}</div>
-      <div class="ci-pr">$${(it.price*it.qty).toFixed(2)} <small style="color:var(--tl);font-size:10px">Bs ${(it.price*it.qty*(CFG.tasaBCV||47.15)).toFixed(2)}</small></div>
+      <div class="ci-pr">$${(it.price*it.qty).toFixed(2)} <small style="color:var(--tl);font-size:10px">Bs ${(it.price*it.qty*(CFG.tasaBCV??47.15)).toFixed(2)}</small></div>
       <div class="ci-ctrl">
         <button class="cqb m" onclick="cq(${i},-1)">−</button>
         <span class="cqv">${it.qty}</span>
@@ -860,12 +860,12 @@ function renderCart(){
   </div>`).join('');
 
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
+  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
   const subD=sub-desc;
-  const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
-  const iva=subD*(CFG.iva||16)/100;
+  const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold??30)?0:(CFG.deliveryCost??3)):0;
+  const iva=subD*(CFG.iva??16)/100;
   const total=subD+envio+iva;
-  const tasa=CFG.tasaBCV||47.15;
+  const tasa=CFG.tasaBCV??47.15;
 
   fEl.innerHTML=`
     <!-- ENVÍO SELECTOR -->
@@ -903,13 +903,13 @@ function renderCart(){
       <div class="map-wrap"><div id="delivery-map"></div></div>
       <div id="map-result" class="map-result" style="display:none"></div>
       <div id="addr-display" class="addr-display"></div>
-      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG.deliveryCost||3}</strong> · Gratis en compras &gt; $${CFG.freeThreshold||30}</div>
+      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG.deliveryCost??3}</strong> · Gratis en compras &gt; $${CFG.freeThreshold??30}</div>
     </div>
 
     <!-- INFO ENVIO NACIONAL -->
     <div id="nacional-info" style="${selShipMode==='nacional'?'':'display:none'}padding:10px 12px;background:var(--cream);border-radius:var(--r);font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7">
       <strong>Envío por MRW</strong> · 24-48h hábiles<br>
-      Gratis en compras &gt; $${CFG.freeThreshold||30} · Cobro a destino si menor
+      Gratis en compras &gt; $${CFG.freeThreshold??30} · Cobro a destino si menor
     </div>
 
     <!-- INFO RETIRO -->
@@ -920,7 +920,7 @@ function renderCart(){
 
     <!-- TOTALES -->
     <div class="c-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
-    ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct||35}%)</span><span>−$${desc.toFixed(2)}</span></div>`:''}
+    ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct??35}%)</span><span>−$${desc.toFixed(2)}</span></div>`:''}
     <div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>
     <div class="c-row"><span>IVA (${CFG.iva}%)</span><span>$${iva.toFixed(2)}</span></div>
     <div class="c-row tot">
@@ -964,7 +964,7 @@ function initDeliveryMap(){
   if(deliveryMap){deliveryMap.invalidateSize();return;}
 
   const ctr=CFG.deliveryCenter||[10.4806,-66.9036];
-  const radius=(CFG.deliveryRadius||15)*1000;
+  const radius=(CFG.deliveryRadius??15)*1000;
 
   deliveryMap=L.map('delivery-map',{scrollWheelZoom:false,zoomControl:true}).setView(ctr,12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -992,11 +992,11 @@ function initDeliveryMap(){
       res.style.display='block';
       if(dist<=radius){
         const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-        const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
+        const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
         const subD=sub-desc;
-        const free=subD>=(CFG.freeThreshold||30);
+        const free=subD>=(CFG.freeThreshold??30);
         res.className='map-result map-ok';
-        res.textContent='✅ Dentro de la zona de delivery — Costo: '+(free?'GRATIS 🎉':'$'+(CFG.deliveryCost||3));
+        res.textContent='✅ Dentro de la zona de delivery — Costo: '+(free?'GRATIS 🎉':'$'+(CFG.deliveryCost??3));
       }else{
         res.className='map-result map-err';
         res.textContent='⚠️ Fuera de la zona. Te recomendamos Envío Nacional (MRW).';
@@ -1089,12 +1089,12 @@ function submitOrder(){
 
   // Build WhatsApp message
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const desc=CFG.descActive?sub*(CFG.descPct||35)/100:0;
+  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
   const subD=sub-desc;
-  const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold||30)?0:(CFG.deliveryCost||3)):0;
-  const iva=subD*(CFG.iva||16)/100;
+  const envio=selShipMode==='delivery'?(subD>=(CFG.freeThreshold??30)?0:(CFG.deliveryCost??3)):0;
+  const iva=subD*(CFG.iva??16)/100;
   const total=subD+envio+iva;
-  const tasa=CFG.tasaBCV||47.15;
+  const tasa=CFG.tasaBCV??47.15;
 
   let msg=`🦋 *Pedido BAILY*
 
@@ -1133,7 +1133,7 @@ function submitOrder(){
   if(envio>0) msg+=`
 🏍️ Delivery: $${envio.toFixed(2)}`;
   msg+=`
-📊 IVA (${CFG.iva||16}%): $${iva.toFixed(2)}`;
+📊 IVA (${CFG.iva??16}%): $${iva.toFixed(2)}`;
   msg+=`
 ✅ *TOTAL: $${total.toFixed(2)}*
 🏦 *Bs. ${(total*tasa).toFixed(2)}*`;
@@ -1393,11 +1393,11 @@ function selectMapResult(lat, lon, displayName) {
     res.style.display = 'block';
     if (dist <= radius) {
       const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
-      const desc = CFG.descActive ? sub * (CFG.descPct || 35) / 100 : 0;
+      const desc = CFG.descActive ? sub * (CFG.descPct ?? 35) / 100 : 0;
       const subD = sub - desc;
-      const free = subD >= (CFG.freeThreshold || 30);
+      const free = subD >= (CFG.freeThreshold ?? 30);
       res.className = 'map-result map-ok';
-      res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost || 3));
+      res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost ?? 3));
     } else {
       res.className = 'map-result map-err';
       res.textContent = '⚠️ Fuera de la zona de cobertura. Te recomendamos Envío Nacional (MRW).';
