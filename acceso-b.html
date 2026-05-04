@@ -261,6 +261,34 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 .bac-title{font-family:Georgia,serif;font-size:14px;color:var(--md);margin-bottom:3px}
 .bac-url{font-size:11px;color:var(--tl);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+
+/* ── IMAGE GALLERY BROWSER MODAL ── */
+.img-browser-bg{position:fixed;inset:0;background:rgba(44,36,32,.6);z-index:700;display:none;align-items:center;justify-content:center;padding:16px}
+.img-browser-bg.on{display:flex}
+.img-browser-box{background:var(--white);border-radius:var(--rl);width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.img-browser-hdr{padding:16px 18px;border-bottom:var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.img-browser-hdr h3{font-family:Georgia,serif;font-size:16px;color:var(--md);font-weight:400}
+.img-browser-search{position:relative;flex:1;min-width:160px}
+.img-browser-search input{width:100%;height:36px;border:1.5px solid var(--mp);border-radius:18px;padding:0 12px 0 34px;font-size:13px;font-family:inherit;outline:none}
+.img-browser-search input:focus{border-color:var(--mauve)}
+.img-browser-search i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tl);font-size:12px}
+.img-browser-body{flex:1;overflow-y:auto;padding:14px}
+.img-browser-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.img-browser-item{position:relative;aspect-ratio:1;border-radius:var(--r);overflow:hidden;cursor:pointer;border:2.5px solid transparent;transition:border-color .2s}
+.img-browser-item:hover{border-color:var(--mauve)}
+.img-browser-item.selected{border-color:var(--mauve);box-shadow:0 0 0 2px var(--mauve)}
+.img-browser-item img{width:100%;height:100%;object-fit:cover}
+.img-browser-item .ib-check{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:var(--mauve);color:#fff;display:none;align-items:center;justify-content:center;font-size:12px}
+.img-browser-item.selected .ib-check{display:flex}
+.img-browser-item .ib-name{position:absolute;bottom:0;left:0;right:0;background:rgba(44,36,32,.55);color:#fff;font-size:9px;padding:3px 5px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.img-browser-foot{padding:12px 18px;border-top:var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.img-browser-info{font-size:13px;color:var(--ts)}
+.img-compress-info{font-size:11px;color:var(--tl);margin-top:3px}
+.img-empty{text-align:center;padding:40px 20px;color:var(--tl)}
+.img-empty i{font-size:44px;color:var(--mp);display:block;margin-bottom:12px}
+/* Upload progress */
+.compress-badge{background:var(--ok);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px}
+
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto.", "date": "2026-05-01", "active": true}]</script>
@@ -728,6 +756,34 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
   </div>
 </div>
 
+
+<!-- ── IMAGE GALLERY BROWSER ── -->
+<div class="img-browser-bg" id="img-browser-bg" onclick="if(event.target===this)closeImgBrowser()">
+  <div class="img-browser-box">
+    <div class="img-browser-hdr">
+      <h3><i class="fa-solid fa-images" style="color:var(--mauve);margin-right:6px"></i>Galería de imágenes</h3>
+      <div class="img-browser-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Buscar por nombre de producto..." oninput="filterGallery(this.value)" id="gallery-search-inp">
+      </div>
+      <button class="mx" onclick="closeImgBrowser()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="img-browser-body">
+      <div class="img-browser-grid" id="gallery-grid"></div>
+    </div>
+    <div class="img-browser-foot">
+      <div>
+        <div class="img-browser-info" id="gallery-sel-info">Selecciona imágenes para agregar</div>
+        <div class="img-compress-info">Las imágenes se comprimen automáticamente al subir</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn bs btn-sm" onclick="closeImgBrowser()">Cancelar</button>
+        <button class="btn bp btn-sm" onclick="applyGallerySelection()" id="gallery-apply-btn">Agregar seleccionadas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1043,10 +1099,9 @@ function openAddP() {
   document.getElementById('pm-desc').value = '';
   document.getElementById('pm-feat').checked = false;
   document.getElementById('pm-best').checked = false;
-  document.getElementById('pm-img').value = '';
+  document.getElementById('pm-imgs-data').value = '[]';
   document.getElementById('pm-eid').value = '';
-  document.getElementById('pm-prev').style.display = 'none';
-  document.getElementById('pm-prev').src = '';
+  document.getElementById('pm-imgs-preview').innerHTML = '';
   fillPMSelects();
   document.getElementById('pm-bg').classList.add('on');
 }
@@ -1101,7 +1156,8 @@ function saveP() {
     stock:     stock,
     size:      document.getElementById('pm-sz').value.trim(),
     desc:      document.getElementById('pm-desc').value.trim(),
-    img:       document.getElementById('pm-img').value,
+    imgs:      JSON.parse(document.getElementById('pm-imgs-data').value || '[]'),
+    img:       (JSON.parse(document.getElementById('pm-imgs-data').value || '[]'))[0] || '',
     featured:  document.getElementById('pm-feat').checked,
     bestseller:document.getElementById('pm-best').checked,
     emoji:     CATS[catId]?.icon || '💄'
@@ -1238,7 +1294,7 @@ function renderPhotos() {
       <div style="display:flex;gap:6px;align-items:center">
         <label class="btn bs btn-sm" style="cursor:pointer;margin:0">
           <i class="fa-solid fa-upload"></i> ${p.img ? 'Cambiar' : 'Subir'}
-          <input type="file" accept="image/*" style="display:none" onchange="uploadPhoto('${p.id}',this)">
+          <input type="file" accept="image/*" multiple capture="environment" style="display:none" onchange="uploadPhoto('${p.id}',this)">
         </label>
         ${p.img ? `<button class="mb del" onclick="removePhoto('${p.id}')" title="Quitar"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
@@ -1258,18 +1314,32 @@ function renderPhotos() {
 function phFilter(q) { photoSrch = q; photoPage = 1; renderPhotos(); }
 
 function uploadPhoto(id, inp) {
-  const file = inp.files[0]; if (!file) return;
-  if (file.size > 3 * 1024 * 1024) { toast('Foto muy grande (máx 3MB)', 'err'); return; }
-  const r = new FileReader();
-  r.onload = e => {
-    const p = PRODUCTS.find(x => x.id === id); if (!p) return;
-    p.img = e.target.result; saveProds(); renderPhotos(); toast('Foto guardada ✓', 'ok');
-  };
-  r.readAsDataURL(file);
-}
-function removePhoto(id) {
+  const files = Array.from(inp.files); if (!files.length) return;
   const p = PRODUCTS.find(x => x.id === id); if (!p) return;
-  p.img = ''; saveProds(); renderPhotos(); toast('Foto eliminada', 'ok');
+  if (!Array.isArray(p.imgs)) p.imgs = p.img ? [p.img] : [];
+  const remaining = 5 - p.imgs.length;
+  if (remaining <= 0) { toast('Ya tiene 5 fotos (máximo)', 'err'); return; }
+  const toProcess = files.slice(0, remaining);
+  let done = 0;
+  toast(`Comprimiendo ${toProcess.length} foto(s)...`);
+  toProcess.forEach(file => {
+    compressImage(file, (dataUrl, kb) => {
+      p.imgs.push(dataUrl);
+      p.img = p.imgs[0];
+      done++;
+      if (done === toProcess.length) { saveProds(); renderPhotos(); toast(`${done} foto(s) · ${kb}KB ✓`, 'ok'); }
+    });
+  });
+  inp.value = '';
+}
+
+function removePhoto(id, idx) {
+  const p = PRODUCTS.find(x => x.id === id); if (!p) return;
+  if (Array.isArray(p.imgs) && idx !== undefined) {
+    p.imgs.splice(idx, 1);
+    p.img = p.imgs[0] || '';
+  } else { p.img = ''; p.imgs = []; }
+  saveProds(); renderPhotos(); toast('Foto eliminada', 'ok');
 }
 
 // ════════════════════════════════════════════════
@@ -2123,6 +2193,224 @@ function deletePost(i) {
   if (!confirm('¿Eliminar este post?')) return;
   const posts = getBlogPosts(); posts.splice(i, 1);
   saveBlogPosts(posts); renderBlogAdmin(); toast('Post eliminado', 'ok');
+}
+
+
+
+// ── IMAGE COMPRESSION & UPLOAD ──
+const MAX_W = 1200, MAX_H = 1200, QUALITY = 0.78, MAX_SIZE_KB = 250;
+
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > MAX_W || h > MAX_H) {
+        const ratio = Math.min(MAX_W / w, MAX_H / h);
+        w = Math.round(w * ratio); h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      // Try different quality levels until under MAX_SIZE_KB
+      let q = QUALITY, dataUrl;
+      do {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        q -= 0.08;
+      } while (dataUrl.length > MAX_SIZE_KB * 1024 * 1.37 && q > 0.2);
+      const kb = Math.round(dataUrl.length * 0.75 / 1024);
+      callback(dataUrl, kb);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleMultiImg(input) {
+  const files = Array.from(input.files);
+  let current = [];
+  try { current = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
+  const remaining = 5 - current.length;
+  if (remaining <= 0) { toast('Ya tienes 5 fotos (máximo)', 'err'); return; }
+  const toProcess = files.slice(0, remaining);
+  let done = 0, saved = [];
+  toast(`Comprimiendo ${toProcess.length} foto(s)...`);
+  toProcess.forEach(file => {
+    compressImage(file, (dataUrl, kb) => {
+      saved.push({dataUrl, kb});
+      done++;
+      if (done === toProcess.length) {
+        saved.forEach(s => current.push(s.dataUrl));
+        document.getElementById('pm-imgs-data').value = JSON.stringify(current);
+        renderImgPreviews(current);
+        const totalKb = saved.reduce((s,x) => s+x.kb, 0);
+        toast(`${done} foto(s) comprimida(s) · ${totalKb}KB total ✓`, 'ok');
+      }
+    });
+  });
+  input.value = '';
+}
+
+function handleImg(inp, prevId, dataId) {
+  const file = inp.files[0]; if (!file) return;
+  compressImage(file, (dataUrl, kb) => {
+    document.getElementById(dataId).value = dataUrl;
+    const prev = document.getElementById(prevId);
+    if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
+    toast(`Foto comprimida · ${kb}KB ✓`, 'ok');
+  });
+  inp.value = '';
+}
+
+function renderImgPreviews(imgs) {
+  const el = document.getElementById('pm-imgs-preview');
+  if (!el) return;
+  el.innerHTML = imgs.map((src, i) => `
+    <div style="position:relative;width:76px;height:76px;flex-shrink:0">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);border:1.5px solid var(--mp)">
+      ${i === 0 ? '<div style="position:absolute;bottom:0;left:0;right:0;background:var(--mauve);color:#fff;font-size:9px;text-align:center;padding:2px;border-radius:0 0 5px 5px">Principal</div>' : ''}
+      <button onclick="removeImg(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--err);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700">×</button>
+    </div>`).join('');
+}
+
+function removeImg(i) {
+  let imgs = [];
+  try { imgs = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
+  imgs.splice(i, 1);
+  document.getElementById('pm-imgs-data').value = JSON.stringify(imgs);
+  renderImgPreviews(imgs);
+}
+
+// ── GALLERY BROWSER ──
+let _galleryContext = null, _gallerySelected = [];
+
+function openImgBrowser(context) {
+  _galleryContext = context;
+  _gallerySelected = [];
+  document.getElementById('gallery-search-inp').value = '';
+  document.getElementById('img-browser-bg').classList.add('on');
+  renderGallery('');
+}
+
+function closeImgBrowser() {
+  document.getElementById('img-browser-bg').classList.remove('on');
+  _gallerySelected = [];
+}
+
+function renderGallery(filter) {
+  const grid = document.getElementById('gallery-grid');
+  const q = filter.toLowerCase();
+  // Collect all images from all products
+  const items = [];
+  PRODUCTS.forEach(p => {
+    const imgs = Array.isArray(p.imgs) && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+    imgs.forEach((src, i) => {
+      if (!q || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)) {
+        items.push({ src, name: p.name, brand: p.brand, idx: i, pid: p.id });
+      }
+    });
+  });
+
+  if (!items.length) {
+    grid.innerHTML = '<div class="img-empty"><i class="fa-solid fa-images"></i><p>No hay imágenes aún. Sube fotos a tus productos primero.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = items.map((item, i) => `
+    <div class="img-browser-item ${_gallerySelected.includes(i)?'selected':''}" onclick="toggleGalleryItem(${i})" data-i="${i}">
+      <img src="${item.src}" alt="${item.name}">
+      <div class="ib-check"><i class="fa-solid fa-check"></i></div>
+      <div class="ib-name">${item.brand} · ${item.name}</div>
+    </div>`).join('');
+
+  window._galleryItems = items;
+  updateGalleryInfo();
+}
+
+function toggleGalleryItem(i) {
+  const idx = _gallerySelected.indexOf(i);
+  if (idx >= 0) { _gallerySelected.splice(idx, 1); }
+  else { _gallerySelected.push(i); }
+  document.querySelectorAll('.img-browser-item').forEach((el, j) => {
+    el.classList.toggle('selected', _gallerySelected.includes(j));
+  });
+  updateGalleryInfo();
+}
+
+function updateGalleryInfo() {
+  const el = document.getElementById('gallery-sel-info');
+  if (el) el.textContent = _gallerySelected.length
+    ? `${_gallerySelected.length} imagen(es) seleccionada(s)`
+    : 'Selecciona imágenes para agregar';
+}
+
+function filterGallery(q) {
+  _gallerySelected = [];
+  renderGallery(q);
+}
+
+function applyGallerySelection() {
+  if (!_gallerySelected.length) { toast('Selecciona al menos una imagen', 'err'); return; }
+  if (_galleryContext === 'pm') {
+    let current = [];
+    try { current = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
+    const remaining = 5 - current.length;
+    const toAdd = _gallerySelected.slice(0, remaining).map(i => window._galleryItems[i].src);
+    toAdd.forEach(src => current.push(src));
+    document.getElementById('pm-imgs-data').value = JSON.stringify(current);
+    renderImgPreviews(current);
+    toast(`${toAdd.length} imagen(es) agregada(s) ✓`, 'ok');
+  }
+  closeImgBrowser();
+}
+
+function handleMultiImg(input) {
+  const files = Array.from(input.files);
+  const preview = document.getElementById('pm-imgs-preview');
+  let current = [];
+  try { current = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
+
+  const remaining = 5 - current.length;
+  if (remaining <= 0) { toast('Ya tienes 5 fotos (máximo)', 'err'); return; }
+  const toProcess = files.slice(0, remaining);
+  let processed = 0;
+
+  toProcess.forEach(file => {
+    if (file.size > 3 * 1024 * 1024) { toast(`${file.name} es muy grande (máx 3MB)`, 'err'); processed++; return; }
+    const r = new FileReader();
+    r.onload = e => {
+      current.push(e.target.result);
+      processed++;
+      if (processed === toProcess.length) {
+        document.getElementById('pm-imgs-data').value = JSON.stringify(current);
+        renderImgPreviews(current);
+        toast(`${toProcess.length} foto(s) agregada(s) ✓`, 'ok');
+      }
+    };
+    r.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderImgPreviews(imgs) {
+  const el = document.getElementById('pm-imgs-preview');
+  if (!el) return;
+  el.innerHTML = imgs.map((src, i) => `
+    <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+      <img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);border:1.5px solid var(--mp)">
+      ${i === 0 ? '<div style="position:absolute;bottom:0;left:0;right:0;background:var(--mauve);color:#fff;font-size:9px;text-align:center;border-radius:0 0 5px 5px;padding:2px">Principal</div>' : ''}
+      <button onclick="removeImg(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--err);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+    </div>`).join('');
+}
+
+function removeImg(i) {
+  let imgs = [];
+  try { imgs = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
+  imgs.splice(i, 1);
+  document.getElementById('pm-imgs-data').value = JSON.stringify(imgs);
+  renderImgPreviews(imgs);
 }
 
 </script>
