@@ -1456,6 +1456,12 @@ function checkAuth() {
     locked.className = 'pw-locked';
     locked.textContent = `Panel bloqueado por ${mins} minuto(s).`;
     document.querySelector('.pw-card').appendChild(locked);
+    // Add unlock button for admin
+    const unlockBtn = document.createElement('button');
+    unlockBtn.textContent = 'Desbloquear (borrar bloqueo)';
+    unlockBtn.style.cssText = 'margin-top:10px;width:100%;height:38px;background:var(--err);color:#fff;border:none;border-radius:var(--rm);font-size:13px;cursor:pointer;font-family:inherit';
+    unlockBtn.onclick = () => { localStorage.removeItem(PW_LOCK_KEY); location.reload(); };
+    document.querySelector('.pw-card').appendChild(unlockBtn);
     return;
   }
   if (sessionStorage.getItem('baily_admin_auth') === '1') {
