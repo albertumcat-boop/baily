@@ -505,7 +505,10 @@ async function fetchTasaBCV(){
       const rate = data.promedio || data.promedioBCV || data.price || data.bcv;
       if(rate && rate > 1){
         CFG.tasaBCV = parseFloat(rate);
-        localStorage.setItem(CK, JSON.stringify(CFG));
+        // Only update tasaBCV — don't overwrite other admin settings
+        const _savedCfg = JSON.parse(localStorage.getItem(CK)||'{}');
+        _savedCfg.tasaBCV = CFG.tasaBCV;
+        localStorage.setItem(CK, JSON.stringify(_savedCfg));
         const el = document.getElementById('tasa-display');
         if(el) el.textContent = `Bs. ${CFG.tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})} / $`;
         console.log('BCV rate fetched:', CFG.tasaBCV, 'from', url);
