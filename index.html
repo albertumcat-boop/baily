@@ -508,7 +508,17 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script>// ── GLOBAL VARS ──
+var promoI = 0, promoTimer = null;
+var _lpTimer = null;
+var _logoClicks = 0, _logoTimer = null;
+var _dotClicks  = 0, _dotTimer  = null;
+var _adminAttempts = 0;
+var _keyBuf = '';
+var _mapSearchTimer = null;
+var _mapSearchAC = null;
+
+
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
@@ -1179,9 +1189,9 @@ renderBlog();
 // ═══════════════════════════════════════════
 // ACCESO SECRETO AL PANEL
 // ═══════════════════════════════════════════
-let _logoClicks = 0, _logoTimer = null;
-let _dotClicks  = 0, _dotTimer  = null;
-let _adminAttempts = 0;
+
+
+
 const _ADMIN_PW_KEY = 'baily_admin_pw';
 
 function getAdminPw() {
@@ -1225,7 +1235,7 @@ function ftDotClick() {
 }
 
 // Desktop: type "baily"
-let _keyBuf = '';
+
 document.addEventListener('keypress', e => {
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
   _keyBuf = (_keyBuf + e.key.toLowerCase()).slice(-10);
@@ -1280,8 +1290,8 @@ function checkAdminPw() {
 // ═══════════════════════════════════════════
 // BÚSQUEDA DE DIRECCIÓN EN MAPA (Nominatim)
 // ═══════════════════════════════════════════
-let _mapSearchTimer = null;
-let _mapSearchAC = null; // AbortController
+
+ // AbortController
 
 async function onMapSearch(val, immediate = false) {
   const sugEl  = document.getElementById('map-suggestions');
@@ -1457,7 +1467,7 @@ function getBlog() {
 // ═══════════════════════════════════════════
 // PROMO SLIDER
 // ═══════════════════════════════════════════
-let promoI = 0, promoTimer = null;
+
 
 function renderPromoSlider() {
   const promos = getPromos().filter(p => p.active !== false);
@@ -1551,7 +1561,7 @@ function closeVid() {
 
 
 // Long press on logo (2 seconds) → open admin
-let _lpTimer = null;
+
 function logoTouchStart() {
   _lpTimer = setTimeout(() => {
     _lpTimer = null;
