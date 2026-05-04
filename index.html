@@ -178,6 +178,16 @@ h1,h2,h3{font-family:Georgia,serif}
 .ship-opt i{font-size:18px}
 
 /* MAP */
+.map-search-wrap{position:relative;margin-bottom:8px}
+.map-search-inp{width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--rm);padding:0 40px 0 36px;font-size:13px;font-family:inherit;outline:none;background:var(--white);color:var(--text)}
+.map-search-inp:focus{border-color:var(--mauve)}
+.map-search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tl);font-size:14px;pointer-events:none}
+.map-search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tl);cursor:pointer;font-size:14px;padding:2px;display:none}
+.map-suggestions{position:absolute;top:42px;left:0;right:0;background:var(--white);border:1.5px solid var(--mp);border-radius:var(--rm);box-shadow:var(--shm);z-index:9999;max-height:180px;overflow-y:auto;display:none}
+.map-sug-item{padding:10px 14px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--cream2);line-height:1.4}
+.map-sug-item:last-child{border-bottom:none}
+.map-sug-item:hover{background:var(--mp);color:var(--mauve)}
+.map-sug-loading{padding:10px 14px;font-size:12px;color:var(--tl);text-align:center}
 .map-wrap{margin-bottom:12px;border-radius:var(--rm);overflow:hidden;border:1.5px solid var(--mp)}
 #delivery-map{height:220px;width:100%;display:block}
 .map-hint{font-size:11px;color:var(--ts);margin-bottom:6px;display:flex;align-items:center;gap:6px}
@@ -260,7 +270,7 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 <!-- HEADER -->
 <header class="site-hdr">
   <div class="hdr-top">
-    <div class="logo" onclick="goHome()">B<em>A</em>ILY</div>
+    <div class="logo" onclick="logoClick()" id="logo-btn" title="">B<em>A</em>ILY</div>
     <div class="hdr-search">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="text" id="srch-inp" placeholder="Buscar productos, marcas..." oninput="onSearch(this.value)" autocomplete="off">
@@ -357,9 +367,7 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
     </div>
   </div>
   <div class="ft-bot">
-    © 2026 BAILY · Todos los derechos reservados
-    <!-- acceso-b -->
-    <a href="acceso-b.html" style="color:transparent;font-size:1px;pointer-events:none" tabindex="-1" aria-hidden="true">·</a>
+    © 2026 BAILY · Todos los derechos reservados <span id="ft-dot" onclick="ftDotClick()" style="cursor:default;user-select:none;color:rgba(255,255,255,.08);font-size:11px" title="">•</span>
   </div>
 </footer>
 
@@ -778,7 +786,20 @@ function renderCart(){
 
     <!-- MAPA DELIVERY -->
     <div id="delivery-wrap" style="${selShipMode==='delivery'?'':'display:none'}">
-      <div class="map-hint"><i class="fa-solid fa-location-dot" style="color:var(--mauve)"></i> Toca el mapa para seleccionar tu dirección de entrega</div>
+      <!-- BUSCADOR DE DIRECCIÓN -->
+      <div class="map-search-wrap" id="map-search-wrap">
+        <i class="fa-solid fa-magnifying-glass map-search-ico"></i>
+        <input type="text" class="map-search-inp" id="map-search-inp"
+          placeholder="Busca tu dirección en Caracas..."
+          oninput="onMapSearch(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();onMapSearch(this.value,true)}"
+          autocomplete="off">
+        <button class="map-search-clear" id="map-search-clear" onclick="clearMapSearch()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="map-suggestions" id="map-suggestions"></div>
+      </div>
+      <div class="map-hint" style="margin-bottom:6px"><i class="fa-solid fa-hand-pointer" style="color:var(--mauve)"></i> O toca directamente el mapa para marcar tu ubicación</div>
       <div class="map-wrap"><div id="delivery-map"></div></div>
       <div id="map-result" class="map-result" style="display:none"></div>
       <div id="addr-display" class="addr-display"></div>
@@ -1059,6 +1080,198 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMD();closeCart
 // INIT
 renderBrands();
 updBadge();
+
+// ═══════════════════════════════════════════
+// ACCESO DISCRETO AL PANEL
+// ═══════════════════════════════════════════
+// Método 1: clic en logo 5 veces rápido
+let _logoClicks = 0, _logoTimer = null;
+function logoClick() {
+  goHome();
+  _logoClicks++;
+  clearTimeout(_logoTimer);
+  if (_logoClicks >= 5) {
+    _logoClicks = 0;
+    window.location.href = 'acceso-b.html';
+    return;
+  }
+  _logoTimer = setTimeout(() => { _logoClicks = 0; }, 1500);
+}
+
+// Método 2: clic en el punto del footer 3 veces
+let _dotClicks = 0, _dotTimer = null;
+function ftDotClick() {
+  _dotClicks++;
+  clearTimeout(_dotTimer);
+  if (_dotClicks >= 3) {
+    _dotClicks = 0;
+    window.location.href = 'acceso-b.html';
+    return;
+  }
+  _dotTimer = setTimeout(() => { _dotClicks = 0; }, 1200);
+}
+
+// Método 3: teclado — escribe "baily" en cualquier momento (desktop)
+let _keyBuf = '';
+document.addEventListener('keypress', e => {
+  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+  _keyBuf += e.key.toLowerCase();
+  if (_keyBuf.includes('baily')) { _keyBuf = ''; window.location.href = 'acceso-b.html'; }
+  if (_keyBuf.length > 10) _keyBuf = _keyBuf.slice(-10);
+});
+
+
+// ═══════════════════════════════════════════
+// BÚSQUEDA DE DIRECCIÓN EN MAPA (Nominatim)
+// ═══════════════════════════════════════════
+let _mapSearchTimer = null;
+let _mapSearchAC = null; // AbortController
+
+async function onMapSearch(val, immediate = false) {
+  const sugEl  = document.getElementById('map-suggestions');
+  const clearBtn = document.getElementById('map-search-clear');
+  if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
+
+  if (!val || val.trim().length < 3) {
+    if (sugEl) { sugEl.innerHTML = ''; sugEl.style.display = 'none'; }
+    return;
+  }
+
+  clearTimeout(_mapSearchTimer);
+  _mapSearchTimer = setTimeout(() => doMapSearch(val), immediate ? 0 : 500);
+}
+
+async function doMapSearch(query) {
+  const sugEl = document.getElementById('map-suggestions');
+  if (!sugEl) return;
+
+  sugEl.style.display = 'block';
+  sugEl.innerHTML = '<div class="map-sug-loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Buscando...</div>';
+
+  // Cancel previous request
+  if (_mapSearchAC) _mapSearchAC.abort();
+  _mapSearchAC = new AbortController();
+
+  try {
+    // Nominatim search biased to Caracas/Venezuela
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(query + ', Caracas, Venezuela')}` +
+      `&format=json&limit=6&addressdetails=1&accept-language=es` +
+      `&viewbox=-67.1,-67.5,10.6,10.2&bounded=0`;
+
+    const res = await fetch(url, {
+      signal: _mapSearchAC.signal,
+      headers: { 'User-Agent': 'BAILY-Store/1.0' }
+    });
+    const results = await res.json();
+
+    if (!results.length) {
+      // Try without "Caracas" restriction
+      const url2 = `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(query + ', Venezuela')}` +
+        `&format=json&limit=5&accept-language=es`;
+      const res2 = await fetch(url2, { headers: { 'User-Agent': 'BAILY-Store/1.0' } });
+      const results2 = await res2.json();
+      renderSuggestions(results2);
+    } else {
+      renderSuggestions(results);
+    }
+  } catch(e) {
+    if (e.name !== 'AbortError') {
+      sugEl.innerHTML = '<div class="map-sug-loading" style="color:var(--err)">No se pudo buscar. Toca el mapa.</div>';
+    }
+  }
+}
+
+function renderSuggestions(results) {
+  const sugEl = document.getElementById('map-suggestions');
+  if (!sugEl) return;
+
+  if (!results.length) {
+    sugEl.innerHTML = '<div class="map-sug-loading" style="color:var(--tl)">Sin resultados. Intenta con otro nombre.</div>';
+    return;
+  }
+
+  sugEl.innerHTML = results.map((r, i) => {
+    // Clean up display name — remove long country/state suffixes
+    const parts = r.display_name.split(',').slice(0, 4).join(',');
+    return `<div class="map-sug-item" onclick="selectMapResult(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "\\'")}')">
+      <i class="fa-solid fa-location-dot" style="color:var(--mauve);margin-right:6px;font-size:11px"></i>${parts}
+    </div>`;
+  }).join('');
+}
+
+function selectMapResult(lat, lon, displayName) {
+  if (!deliveryMap) return;
+
+  const latlng = L.latLng(parseFloat(lat), parseFloat(lon));
+  deliveryMap.setView(latlng, 15, { animate: true });
+
+  // Place marker
+  if (deliveryMarker) deliveryMap.removeLayer(deliveryMarker);
+  const custIcon = L.divIcon({
+    html: '<div style="background:#C46A5A;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)"></div>',
+    className: '', iconSize: [14, 14], iconAnchor: [7, 7]
+  });
+  deliveryMarker = L.marker(latlng, { icon: custIcon }).addTo(deliveryMap);
+  deliveryMarker.bindPopup(displayName.split(',').slice(0,3).join(','));
+
+  selLat = parseFloat(lat).toFixed(6);
+  selLng = parseFloat(lon).toFixed(6);
+  selAddress = displayName;
+
+  // Check coverage
+  const ctr = CFG.deliveryCenter || [10.4806, -66.9036];
+  const radius = (CFG.deliveryRadius || 15) * 1000;
+  const dist = deliveryMap.distance(ctr, latlng);
+  const res = document.getElementById('map-result');
+  if (res) {
+    res.style.display = 'block';
+    if (dist <= radius) {
+      const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const desc = CFG.descActive ? sub * (CFG.descPct || 35) / 100 : 0;
+      const subD = sub - desc;
+      const free = subD >= (CFG.freeThreshold || 30);
+      res.className = 'map-result map-ok';
+      res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost || 3));
+    } else {
+      res.className = 'map-result map-err';
+      res.textContent = '⚠️ Fuera de la zona de cobertura. Te recomendamos Envío Nacional (MRW).';
+    }
+  }
+
+  // Show address
+  const addrEl = document.getElementById('addr-display');
+  if (addrEl) {
+    addrEl.style.display = 'block';
+    addrEl.innerHTML = `<i class="fa-solid fa-location-dot" style="color:var(--mauve)"></i> <strong>Dirección seleccionada:</strong><br>${displayName.split(',').slice(0,4).join(',')}`;
+  }
+
+  // Close suggestions & update search input
+  const sugEl = document.getElementById('map-suggestions');
+  if (sugEl) { sugEl.style.display = 'none'; sugEl.innerHTML = ''; }
+  const inp = document.getElementById('map-search-inp');
+  if (inp) inp.value = displayName.split(',').slice(0,3).join(',');
+}
+
+function clearMapSearch() {
+  const inp = document.getElementById('map-search-inp');
+  const sug = document.getElementById('map-suggestions');
+  const clr = document.getElementById('map-search-clear');
+  if (inp) inp.value = '';
+  if (sug) { sug.innerHTML = ''; sug.style.display = 'none'; }
+  if (clr) clr.style.display = 'none';
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('map-search-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const sug = document.getElementById('map-suggestions');
+    if (sug) { sug.style.display = 'none'; }
+  }
+});
+
 </script>
 </body>
 </html>
