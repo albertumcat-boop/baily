@@ -1245,7 +1245,8 @@ const MAX_TRIES   = 5;
 const LOCK_TIME   = 5 * 60 * 1000; // 5 minutes
 
 function getStoredPw() {
-  return localStorage.getItem(PW_KEY) || 'baily2026';
+  // Sync with index.html password key
+  return localStorage.getItem(PW_KEY) || localStorage.getItem('baily_admin_pw') || 'baily2026';
 }
 
 function checkPw() {
@@ -1341,6 +1342,7 @@ function changePw() {
   const conf = prompt('Confirma la nueva contraseña:');
   if (nw !== conf) { toast('Las contraseñas no coinciden', 'err'); return; }
   localStorage.setItem(PW_KEY, nw);
+  localStorage.setItem('baily_admin_pw', nw); // sync with index
   toast('Contraseña cambiada exitosamente ✓', 'ok');
 }
 
