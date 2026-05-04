@@ -290,8 +290,8 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 .promo-prev:hover,.promo-next:hover{background:rgba(255,255,255,.4)}
 
 /* SEC HEADER */
-.sec-hdr{background:var(--mauve);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;margin:20px 20px 14px;border-radius:var(--rm);font-family:Georgia,serif;font-size:15px;font-weight:400;letter-spacing:1px;max-width:1200px;margin-left:auto;margin-right:auto;box-sizing:border-box}
-.sec-wing{opacity:.6;font-size:13px}
+.blog-sec-hdr{background:var(--mauve);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;margin:20px 20px 14px;border-radius:var(--rm);font-family:Georgia,serif;font-size:15px;font-weight:400;letter-spacing:1px;max-width:1200px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+.blog-sec-wing{opacity:.6;font-size:13px}
 
 /* BLOG */
 .blog-section{max-width:1200px;margin:0 auto;padding:0 20px 40px}
@@ -364,22 +364,6 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 
 <!-- SHOP -->
 
-<!-- PROMO SLIDER -->
-<div class="promo-wrap" id="promo-wrap">
-  <div class="promo-track" id="promo-track"></div>
-  <div class="promo-dots" id="promo-dots"></div>
-  <button class="promo-prev" onclick="promoNav(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-  <button class="promo-next" onclick="promoNav(1)"><i class="fa-solid fa-chevron-right"></i></button>
-</div>
-
-<!-- BLOG & VIDEOS -->
-<div id="blog-wrap" style="display:none">
-  <div class="sec-hdr"><span class="sec-wing">✦</span><span id="blog-sec-title">Blog & Tutoriales</span><span class="sec-wing">✦</span></div>
-  <div class="blog-section">
-    <div class="blog-grid" id="blog-grid"></div>
-  </div>
-</div>
-
 <!-- VIDEO MODAL -->
 <div class="vid-overlay" id="vid-overlay" onclick="if(event.target===this)closeVid()">
   <div class="vid-box">
@@ -397,6 +381,12 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
     <div class="step-arrow" id="arr2" style="display:none"><i class="fa-solid fa-chevron-right"></i></div>
     <div class="step" id="step-cat" style="display:none"><div class="step-badge">3</div> <span id="step-cat-txt">Productos</span></div>
   </div>
+  <!-- PROMO SLIDER -->
+  <div id="promo-wrap" style="margin-bottom:24px;border-radius:var(--rm);overflow:hidden"><div class="promo-track" id="promo-track" style="display:flex;transition:transform .55s cubic-bezier(.4,0,.2,1)"></div><div class="promo-dots" id="promo-dots" style="display:flex;gap:6px;justify-content:center;padding:8px;background:rgba(0,0,0,.18)"></div></div>
+  <!-- BLOG -->
+  <div id="blog-wrap" style="display:none;margin-bottom:28px"><h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:var(--md);letter-spacing:.5px;margin-bottom:6px" id="blog-sec-title">Blog & Tutoriales</h2><div style="height:2px;background:linear-gradient(90deg,var(--mauve),transparent);margin-bottom:18px;width:60px"></div><div class="blog-grid" id="blog-grid"></div></div>
+
+  
 
   <!-- SEARCH RESULTS -->
   <section id="search-results-section" style="display:none;margin-bottom:30px">
