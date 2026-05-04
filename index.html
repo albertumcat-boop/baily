@@ -336,7 +336,7 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 <!-- HEADER -->
 <header class="site-hdr">
   <div class="hdr-top">
-    <div class="logo" onclick="logoClick()" id="logo-btn" title="">B<em>A</em>ILY</div>
+    <div class="logo" onclick="logoClick()" id="logo-btn" title="" ontouchstart="logoTouchStart()" ontouchend="logoTouchEnd()" onmousedown="logoTouchStart()" onmouseup="logoTouchEnd()" onmouseleave="logoTouchEnd()">B<em>A</em>ILY</div>
     <div class="hdr-search">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="text" id="srch-inp" placeholder="Buscar productos, marcas..." oninput="onSearch(this.value)" autocomplete="off">
@@ -1547,6 +1547,20 @@ function closeVid() {
   document.getElementById('vid-frame').src = '';
   document.getElementById('vid-overlay').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+
+// Long press on logo (2 seconds) → open admin
+let _lpTimer = null;
+function logoTouchStart() {
+  _lpTimer = setTimeout(() => {
+    _lpTimer = null;
+    _logoClicks = 0;
+    openAdminModal();
+  }, 2000);
+}
+function logoTouchEnd() {
+  if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
 }
 
 </script>
