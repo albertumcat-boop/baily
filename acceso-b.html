@@ -216,6 +216,34 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 .cust-rec{background:var(--mp);color:var(--mauve)}
 .cust-vip{background:linear-gradient(135deg,#FFF3E0,#FFE0B2);color:#E65100}
 
+
+/* FINANZAS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.kpi{background:var(--white);border-radius:var(--rm);padding:18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:-18px;right:-18px;width:70px;height:70px;border-radius:50%;opacity:.07}
+.kpi.green{border-left:4px solid var(--ok)}.kpi.green::after{background:var(--ok)}
+.kpi.mauve{border-left:4px solid var(--mauve)}.kpi.mauve::after{background:var(--mauve)}
+.kpi.gold{border-left:4px solid var(--gold)}.kpi.gold::after{background:var(--gold)}
+.kpi.blue{border-left:4px solid #5B8DEF}.kpi.blue::after{background:#5B8DEF}
+.kpi.err{border-left:4px solid var(--err)}.kpi.err::after{background:var(--err)}
+.kpi-ico{font-size:22px;margin-bottom:8px}
+.kpi-val{font-family:Georgia,serif;font-size:26px;color:var(--md);margin-bottom:2px;word-break:break-all}
+.kpi-lbl{font-size:12px;color:var(--ts)}
+.kpi-sub{font-size:11px;color:var(--tl);margin-top:3px}
+.chart-bar-wrap{background:var(--white);border-radius:var(--rm);padding:18px;box-shadow:var(--sh);margin-bottom:18px}
+.chart-bar-wrap h3{font-family:Georgia,serif;font-size:15px;font-weight:400;color:var(--md);margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-lbl{font-size:12px;color:var(--ts);width:120px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:20px;background:var(--cream2);border-radius:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--mauve),var(--mm));transition:width .6s ease;min-width:2px}
+.bar-val{font-size:12px;color:var(--md);font-weight:600;width:60px;text-align:right;flex-shrink:0}
+.period-btns{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.period-btn{padding:5px 14px;border-radius:16px;border:1.5px solid var(--mp);background:var(--white);font-size:12px;font-weight:500;cursor:pointer;color:var(--ts);font-family:inherit;transition:all .2s}
+.period-btn.on{border-color:var(--mauve);background:var(--mauve);color:#fff}
+.fin-table-wrap{background:var(--white);border-radius:var(--rm);box-shadow:var(--sh);overflow:hidden}
+.fin-empty{text-align:center;padding:50px 20px;color:var(--tl)}
+.fin-empty i{font-size:44px;color:var(--mp);display:block;margin-bottom:12px}
+
 </style>
 </head>
 <body>
@@ -259,6 +287,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     <button class="sb-btn" onclick="goPg('categories',this)"><i class="fa-solid fa-folder-tree"></i>Categorías</button>
     <button class="sb-btn" onclick="goPg('brands',this)"><i class="fa-solid fa-star"></i>Marcas</button>
     <button class="sb-btn" onclick="goPg('photos',this)"><i class="fa-solid fa-images"></i>Fotos</button>
+    <button class="sb-btn" onclick="goPg('finanzas',this)"><i class="fa-solid fa-chart-line"></i>Finanzas</button>
     <button class="sb-btn" onclick="goPg('customers',this)"><i class="fa-solid fa-users"></i>Clientes</button>
     <div class="sb-sec">Sistema</div>
     <button class="sb-btn" onclick="goPg('settings',this)"><i class="fa-solid fa-sliders"></i>Configuración</button>
@@ -379,6 +408,61 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
       </div>
     </div>
 
+
+
+    <!-- FINANZAS -->
+    <div class="pg" id="pg-finanzas">
+
+      <!-- Period selector -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+        <div>
+          <div style="font-family:Georgia,serif;font-size:17px;color:var(--md)">Finanzas & Ventas</div>
+          <div style="font-size:12px;color:var(--ts);margin-top:2px">Solo ventas <strong>confirmadas</strong> por el admin</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn bs btn-sm" onclick="exportFinanzas()"><i class="fa-solid fa-download"></i> Exportar CSV</button>
+        </div>
+      </div>
+
+      <div class="period-btns">
+        <button class="period-btn on" onclick="setPeriod('all',this)">Todo</button>
+        <button class="period-btn" onclick="setPeriod('today',this)">Hoy</button>
+        <button class="period-btn" onclick="setPeriod('week',this)">Esta semana</button>
+        <button class="period-btn" onclick="setPeriod('month',this)">Este mes</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="fin-kpis"></div>
+
+      <!-- Top productos -->
+      <div class="chart-bar-wrap">
+        <h3>Productos más vendidos</h3>
+        <div id="fin-top-prods"></div>
+      </div>
+
+      <!-- Top marcas -->
+      <div class="chart-bar-wrap">
+        <h3>Ventas por marca</h3>
+        <div id="fin-top-brands"></div>
+      </div>
+
+      <!-- Historial de ventas -->
+      <div class="fin-table-wrap">
+        <div class="tw-hdr">
+          <h3>Historial de ventas confirmadas</h3>
+          <span id="fin-count" style="font-size:12px;color:var(--ts)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Envío</th><th>Total USD</th><th>Total Bs</th><th>Tasa</th></tr>
+            </thead>
+            <tbody id="fin-tb"></tbody>
+          </table>
+        </div>
+        <div class="pag" id="fin-pag"></div>
+      </div>
+    </div>
 
     <!-- CUSTOMERS -->
     <div class="pg" id="pg-customers">
@@ -652,6 +736,7 @@ function renderPage(name) {
   const map = {
     dashboard:  renderDash,
     orders:     renderOrders,
+    finanzas:   renderFinanzas,
     customers:  renderCustomers,
     inventory:  () => { invPage = 1; renderInv(); },
     products:   () => { prodPage = 1; renderProds(); },
@@ -1514,6 +1599,200 @@ function exportCustomers() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'baily_clientes.csv'; a.click();
   toast('CSV exportado ✓', 'ok');
+}
+
+
+// ════════════════════════════════════════════════
+// FINANZAS
+// ════════════════════════════════════════════════
+let finPeriod = 'all', finPage = 1, FIN_PER = 20;
+
+function getConfirmedOrders() {
+  const all = getOrders();
+  return all.filter(o => o.status === 'confirmed');
+}
+
+function filterByPeriod(orders, period) {
+  if (period === 'all') return orders;
+  const now = new Date();
+  return orders.filter(o => {
+    const d = new Date(o.confirmedAt || o.date || '');
+    if (isNaN(d)) return period === 'all';
+    if (period === 'today') {
+      return d.toDateString() === now.toDateString();
+    }
+    if (period === 'week') {
+      const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+      return d >= weekAgo;
+    }
+    if (period === 'month') {
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    return true;
+  });
+}
+
+function setPeriod(p, btn) {
+  finPeriod = p; finPage = 1;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderFinanzas();
+}
+
+function renderFinanzas() {
+  const allConf = getConfirmedOrders();
+  const orders  = filterByPeriod(allConf, finPeriod);
+
+  // ── KPIs ──
+  const totalVentas  = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const totalBs      = orders.reduce((s, o) => s + (o.totalBs || 0), 0);
+  const totalEnvio   = orders.reduce((s, o) => s + (o.envio || 0), 0);
+  const totalItems   = orders.reduce((s, o) => s + (o.items || []).reduce((si, i) => si + (i.qty || 1), 0), 0);
+  const avgTicket    = orders.length ? totalVentas / orders.length : 0;
+  const tasaPromedio = orders.length ? (orders.reduce((s, o) => s + (o.tasaBCV || 47.15), 0) / orders.length) : (CFG.tasaBCV || 47.15);
+
+  document.getElementById('fin-kpis').innerHTML = `
+    <div class="kpi green">
+      <div class="kpi-ico">💰</div>
+      <div class="kpi-val">$${totalVentas.toFixed(2)}</div>
+      <div class="kpi-lbl">Ingresos totales</div>
+      <div class="kpi-sub">Bs. ${totalBs.toFixed(2)}</div>
+    </div>
+    <div class="kpi mauve">
+      <div class="kpi-ico">🧾</div>
+      <div class="kpi-val">${orders.length}</div>
+      <div class="kpi-lbl">Ventas confirmadas</div>
+      <div class="kpi-sub">Total: ${allConf.length} históricas</div>
+    </div>
+    <div class="kpi gold">
+      <div class="kpi-ico">📦</div>
+      <div class="kpi-val">${totalItems}</div>
+      <div class="kpi-lbl">Unidades vendidas</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-ico">🎯</div>
+      <div class="kpi-val">$${avgTicket.toFixed(2)}</div>
+      <div class="kpi-lbl">Ticket promedio</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-ico">🏍️</div>
+      <div class="kpi-val">$${totalEnvio.toFixed(2)}</div>
+      <div class="kpi-lbl">Ingresos por delivery</div>
+    </div>
+    <div class="kpi mauve">
+      <div class="kpi-ico">💹</div>
+      <div class="kpi-val">${tasaPromedio.toFixed(2)}</div>
+      <div class="kpi-lbl">Tasa BCV promedio</div>
+    </div>`;
+
+  // ── Top productos ──
+  const prodMap = {};
+  orders.forEach(o => {
+    (o.items || []).forEach(item => {
+      if (!prodMap[item.name]) prodMap[item.name] = { qty: 0, total: 0, brand: item.brand };
+      prodMap[item.name].qty   += item.qty || 1;
+      prodMap[item.name].total += (item.price || 0) * (item.qty || 1);
+    });
+  });
+  const topProds = Object.entries(prodMap).sort((a,b) => b[1].qty - a[1].qty).slice(0, 8);
+  const maxQty = topProds[0]?.[1]?.qty || 1;
+  document.getElementById('fin-top-prods').innerHTML = topProds.length
+    ? topProds.map(([name, d]) => `
+        <div class="bar-row">
+          <div class="bar-lbl" title="${name}">${name}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(d.qty/maxQty*100).toFixed(1)}%"></div></div>
+          <div class="bar-val">${d.qty} uds</div>
+        </div>
+        <div style="font-size:10px;color:var(--tl);margin:-6px 0 10px 130px">$${d.total.toFixed(2)} · ${d.brand}</div>`)
+      .join('')
+    : '<div class="fin-empty"><i class="fa-solid fa-box-open"></i><p>Sin ventas en este período</p></div>';
+
+  // ── Top marcas ──
+  const brandMap = {};
+  orders.forEach(o => {
+    (o.items || []).forEach(item => {
+      if (!brandMap[item.brand]) brandMap[item.brand] = { total: 0, qty: 0 };
+      brandMap[item.brand].total += (item.price || 0) * (item.qty || 1);
+      brandMap[item.brand].qty   += item.qty || 1;
+    });
+  });
+  const topBrands = Object.entries(brandMap).sort((a,b) => b[1].total - a[1].total).slice(0, 6);
+  const maxBrand  = topBrands[0]?.[1]?.total || 1;
+  document.getElementById('fin-top-brands').innerHTML = topBrands.length
+    ? topBrands.map(([brand, d]) => `
+        <div class="bar-row">
+          <div class="bar-lbl">${brand}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(d.total/maxBrand*100).toFixed(1)}%;background:linear-gradient(90deg,var(--gold),#e8c87a)"></div></div>
+          <div class="bar-val">$${d.total.toFixed(0)}</div>
+        </div>`)
+      .join('')
+    : '<div class="fin-empty"><i class="fa-solid fa-chart-bar"></i><p>Sin datos</p></div>';
+
+  // ── Tabla historial ──
+  const pages = Math.max(1, Math.ceil(orders.length / FIN_PER));
+  finPage = Math.min(finPage, pages);
+  const sl = [...orders].reverse().slice((finPage-1)*FIN_PER, finPage*FIN_PER);
+
+  document.getElementById('fin-count').textContent = `${orders.length} venta${orders.length !== 1 ? 's' : ''}`;
+
+  document.getElementById('fin-tb').innerHTML = sl.length
+    ? sl.map(o => {
+        const items  = (o.items || []).map(i => `${i.name} x${i.qty}`).join(', ');
+        const cliente= o.customer ? o.customer.name || '—' : '—';
+        const shipLabel = { delivery: '🏍️', nacional: '📦', retiro: '🏠' }[o.shipMode] || '—';
+        return `<tr>
+          <td style="font-size:12px;white-space:nowrap;color:var(--ts)">${o.confirmedAt || o.date || '—'}</td>
+          <td><div style="font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cliente}</div>${o.customer?.cedula ? `<div style="font-size:10px;color:var(--tl)">${o.customer.cedula}</div>` : ''}</td>
+          <td style="font-size:11px;color:var(--ts);max-width:180px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${items}">${items}</div></td>
+          <td style="text-align:center">${shipLabel}</td>
+          <td style="font-family:Georgia,serif;color:var(--ok);font-weight:600">$${(o.total||0).toFixed(2)}</td>
+          <td style="font-size:12px;color:var(--mauve)">Bs ${(o.totalBs||0).toFixed(2)}</td>
+          <td style="font-size:11px;color:var(--tl)">${o.tasaBCV ? o.tasaBCV.toFixed(2) : '—'}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7"><div class="fin-empty"><i class="fa-solid fa-receipt"></i><p>No hay ventas confirmadas${finPeriod !== 'all' ? ' en este período' : ' aún'}</p>${finPeriod !== 'all' ? '<p style="font-size:12px;margin-top:8px">Prueba seleccionando "Todo"</p>' : ''}</div></td></tr>`;
+
+  // Pagination
+  let ph = '';
+  if (pages > 1) {
+    ph += `<span class="pgi">Pág. ${finPage}/${pages}</span>`;
+    if (finPage > 1) ph += `<button class="pgb" onclick="finPage--;renderFinanzas()">‹</button>`;
+    for (let i = Math.max(1,finPage-2); i <= Math.min(pages,finPage+2); i++)
+      ph += `<button class="pgb ${i===finPage?'on':''}" onclick="finPage=${i};renderFinanzas()">${i}</button>`;
+    if (finPage < pages) ph += `<button class="pgb" onclick="finPage++;renderFinanzas()">›</button>`;
+  }
+  document.getElementById('fin-pag').innerHTML = ph;
+}
+
+function exportFinanzas() {
+  const orders = filterByPeriod(getConfirmedOrders(), finPeriod);
+  if (!orders.length) { toast('No hay ventas para exportar', 'err'); return; }
+  const headers = ['Fecha','Cliente','Cédula','Correo','Productos','Entrega','Dirección','Subtotal','Descuento','Envío','IVA','Total USD','Total Bs','Tasa BCV'];
+  const rows = orders.map(o => {
+    const items = (o.items||[]).map(i=>`${i.name} x${i.qty}`).join(' | ');
+    return [
+      o.confirmedAt||o.date||'',
+      o.customer?.name||'',
+      o.customer?.cedula||'',
+      o.customer?.email||'',
+      items,
+      o.shipMode||'',
+      o.address||'',
+      (o.sub||0).toFixed(2),
+      (o.desc||0).toFixed(2),
+      (o.envio||0).toFixed(2),
+      (o.iva||0).toFixed(2),
+      (o.total||0).toFixed(2),
+      (o.totalBs||0).toFixed(2),
+      o.tasaBCV||''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  const period = finPeriod === 'all' ? 'completo' : finPeriod;
+  a.download = `baily_ventas_${period}_${new Date().toLocaleDateString('es-VE').replace(/\//g,'-')}.csv`;
+  a.click(); toast('CSV exportado ✓', 'ok');
 }
 
 </script>
