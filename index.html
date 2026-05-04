@@ -254,6 +254,25 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
   .ship-opts{flex-direction:column}
 }
 @media(max-width:400px){.prod-grid{grid-template-columns:repeat(2,1fr);gap:8px}.brands-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* MINI ADMIN ACCESS MODAL */
+.admin-modal-bg{position:fixed;inset:0;background:rgba(44,36,32,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
+.admin-modal-bg.open{display:flex}
+.admin-modal-box{background:var(--white);border-radius:var(--rl);padding:28px 24px;max-width:340px;width:100%;text-align:center;animation:fadeUp .25s ease;box-shadow:0 20px 60px rgba(44,36,32,.25)}
+.admin-modal-logo{font-family:Georgia,serif;font-size:22px;letter-spacing:6px;color:var(--mauve);margin-bottom:4px}
+.admin-modal-logo em{color:var(--gold);font-style:normal}
+.admin-modal-sub{font-size:12px;color:var(--tl);margin-bottom:20px}
+.admin-pw-inp{width:100%;height:46px;border:1.5px solid var(--mp);border-radius:var(--rm);padding:0 14px;font-size:18px;font-family:inherit;color:var(--text);outline:none;text-align:center;letter-spacing:4px;margin-bottom:8px}
+.admin-pw-inp:focus{border-color:var(--mauve)}
+.admin-pw-err{color:var(--err);font-size:12px;min-height:18px;margin-bottom:10px}
+.admin-pw-btn{width:100%;height:46px;background:var(--mauve);color:#fff;border:none;border-radius:var(--rm);font-size:15px;font-family:Georgia,serif;cursor:pointer;letter-spacing:.5px;transition:background .2s}
+.admin-pw-btn:hover{background:var(--md)}
+.admin-pw-cancel{margin-top:10px;background:none;border:none;color:var(--tl);font-size:13px;cursor:pointer;font-family:inherit}
+.admin-pw-cancel:hover{color:var(--ts)}
+.admin-tap-hint{position:fixed;bottom:calc(var(--nav-h,0px) + 80px);left:50%;transform:translateX(-50%);background:var(--mauve);color:#fff;font-size:12px;padding:6px 16px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.admin-tap-hint.show{opacity:1}
+@keyframes shake2{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
 </style>
 </head>
 <body>
@@ -1081,8 +1100,108 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMD();closeCart
 renderBrands();
 updBadge();
 
+
 // ═══════════════════════════════════════════
-// ACCESO DISCRETO AL PANEL
+// ACCESO SECRETO AL PANEL
+// ═══════════════════════════════════════════
+let _logoClicks = 0, _logoTimer = null;
+let _dotClicks  = 0, _dotTimer  = null;
+let _adminAttempts = 0;
+const _ADMIN_PW_KEY = 'baily_admin_pw';
+
+function getAdminPw() {
+  return localStorage.getItem(_ADMIN_PW_KEY) || 'baily2026';
+}
+
+// Logo × 5 clicks  — shows mini password modal
+function logoClick() {
+  _logoClicks++;
+  clearTimeout(_logoTimer);
+
+  // Show tap hint counter
+  const hint = document.getElementById('admin-tap-hint');
+  if (_logoClicks >= 2 && _logoClicks < 5) {
+    hint.textContent = `${5 - _logoClicks} más...`;
+    hint.classList.add('show');
+    setTimeout(() => hint.classList.remove('show'), 900);
+  }
+
+  if (_logoClicks >= 5) {
+    _logoClicks = 0;
+    hint.classList.remove('show');
+    openAdminModal();
+    return;
+  }
+  _logoTimer = setTimeout(() => {
+    _logoClicks = 0;
+    hint.classList.remove('show');
+  }, 1800);
+
+  // Only call goHome on first click
+  if (_logoClicks === 1) goHome();
+}
+
+// Footer dot × 3 clicks
+function ftDotClick() {
+  _dotClicks++;
+  clearTimeout(_dotTimer);
+  if (_dotClicks >= 3) { _dotClicks = 0; openAdminModal(); return; }
+  _dotTimer = setTimeout(() => { _dotClicks = 0; }, 1400);
+}
+
+// Desktop: type "baily"
+let _keyBuf = '';
+document.addEventListener('keypress', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+  _keyBuf = (_keyBuf + e.key.toLowerCase()).slice(-10);
+  if (_keyBuf.includes('baily')) { _keyBuf = ''; openAdminModal(); }
+});
+
+function openAdminModal() {
+  _adminAttempts = 0;
+  document.getElementById('admin-pw-inp').value = '';
+  document.getElementById('admin-pw-err').textContent = '';
+  document.getElementById('admin-modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('admin-pw-inp').focus(), 100);
+}
+
+function closeAdminModal() {
+  document.getElementById('admin-modal-bg').classList.remove('open');
+  document.getElementById('admin-pw-inp').value = '';
+  document.getElementById('admin-pw-err').textContent = '';
+  document.body.style.overflow = '';
+  _adminAttempts = 0;
+}
+
+function checkAdminPw() {
+  const inp = document.getElementById('admin-pw-inp').value;
+  const err = document.getElementById('admin-pw-err');
+  const box = document.getElementById('admin-modal-box');
+
+  if (inp === getAdminPw()) {
+    // Correct — grant session and navigate
+    sessionStorage.setItem('baily_admin_auth', '1');
+    closeAdminModal();
+    window.location.href = 'acceso-b.html';
+  } else {
+    _adminAttempts++;
+    const left = 5 - _adminAttempts;
+    err.textContent = left > 0
+      ? `❌ Contraseña incorrecta · ${left} intento${left !== 1 ? 's' : ''} restante${left !== 1 ? 's' : ''}`
+      : '⛔ Demasiados intentos. Inténtalo más tarde.';
+    document.getElementById('admin-pw-inp').value = '';
+    // Shake
+    box.style.animation = 'none';
+    box.offsetHeight;
+    box.style.animation = 'shake2 .4s ease';
+    if (_adminAttempts >= 5) {
+      setTimeout(() => closeAdminModal(), 2000);
+      _adminAttempts = 0;
+    }
+  }
+}
+
 // ═══════════════════════════════════════════
 // Método 1: clic en logo 5 veces rápido
 let _logoClicks = 0, _logoTimer = null;
@@ -1273,5 +1392,25 @@ document.addEventListener('click', e => {
 });
 
 </script>
+
+<!-- ADMIN ACCESS MODAL -->
+<div class="admin-modal-bg" id="admin-modal-bg" onclick="if(event.target===this)closeAdminModal()">
+  <div class="admin-modal-box" id="admin-modal-box">
+    <div class="admin-modal-logo">B<em>A</em>ILY</div>
+    <div class="admin-modal-sub">Acceso al panel de administración</div>
+    <input type="password" class="admin-pw-inp" id="admin-pw-inp"
+      placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')checkAdminPw()"
+      oninput="document.getElementById('admin-pw-err').textContent=''">
+    <div class="admin-pw-err" id="admin-pw-err"></div>
+    <button class="admin-pw-btn" onclick="checkAdminPw()">
+      <i class="fa-solid fa-lock-open"></i> Entrar
+    </button>
+    <button class="admin-pw-cancel" onclick="closeAdminModal()">Cancelar</button>
+  </div>
+</div>
+<!-- TAP HINT -->
+<div class="admin-tap-hint" id="admin-tap-hint"></div>
+
 </body>
 </html>
