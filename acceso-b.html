@@ -1162,30 +1162,45 @@ function removePhoto(id) {
 // SETTINGS
 // ════════════════════════════════════════════════
 function renderSettings() {
-  // Always re-read from localStorage to show the most current saved values
-  try {
-    const saved = JSON.parse(localStorage.getItem(CK) || '{}');
-    Object.assign(CFG, CFG_DEFAULT, saved); // merge: saved values win over defaults
-  } catch(e) {}
-  document.getElementById('s-tasa').value  = CFG.tasaBCV !== undefined ? CFG.tasaBCV : 47.15;
-  document.getElementById('s-iva').value   = CFG.iva !== undefined ? CFG.iva : 16;
-  document.getElementById('s-don').checked = !!CFG.descActive;
-  document.getElementById('s-dpct').value  = CFG.descPct !== undefined ? CFG.descPct : 35;
-  document.getElementById('s-del').value   = CFG.deliveryCost !== undefined ? CFG.deliveryCost : 3;
-  document.getElementById('s-free').value  = CFG.freeThreshold !== undefined ? CFG.freeThreshold : 30;
-  document.getElementById('s-wa').value    = CFG.wa || '+584242655274';
+  // Read DIRECTLY from localStorage — single source of truth
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  // Show saved value if exists, otherwise show current CFG value, otherwise default
+  document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV  ?? 47.15;
+  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva      ?? 16;
+  document.getElementById('s-don').checked = saved.descActive !== undefined ? !!saved.descActive : !!CFG.descActive;
+  document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct  ?? 35;
+  document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost  ?? 3;
+  document.getElementById('s-free').value  = saved.freeThreshold ?? CFG.freeThreshold ?? 30;
+  document.getElementById('s-wa').value    = saved.wa || CFG.wa || '+584242655274';
+  // Sync CFG with saved values
+  Object.assign(CFG, saved);
 }
+
 function saveSF(key, inpId, isNum) {
   const raw = document.getElementById(inpId).value;
-  const val = isNum ? parseFloat(raw) : raw;
-  // Merge with existing localStorage to not lose any other keys
-  const existing = JSON.parse(localStorage.getItem(CK) || '{}');
-  existing[key] = val;
+  if (raw === '' || raw === null || raw === undefined) {
+    toast('⚠️ El campo está vacío', 'err'); return;
+  }
+  const val = isNum ? parseFloat(raw) : raw.trim();
+  if (isNum && isNaN(val)) { toast('⚠️ Valor inválido', 'err'); return; }
+  // Load current saved, update only this key, save back
+  let current = {};
+  try { current = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  current[key] = val;
   CFG[key] = val;
-  localStorage.setItem(CK, JSON.stringify(existing));
-  toast('Guardado ✓', 'ok');
-  renderSettings(); // Re-render to confirm saved value
+  localStorage.setItem(CK, JSON.stringify(current));
+  // Verify it was saved
+  let verify = {};
+  try { verify = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  if (verify[key] == val) {
+    toast(`✅ ${key} guardado: ${val}`, 'ok');
+  } else {
+    toast('❌ Error al guardar — intenta de nuevo', 'err');
+  }
+  renderSettings();
 }
+
 function saveDisc() {
   const existing = JSON.parse(localStorage.getItem(CK) || '{}');
   existing.descActive = document.getElementById('s-don').checked;
