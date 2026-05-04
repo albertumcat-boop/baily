@@ -1203,44 +1203,6 @@ function checkAdminPw() {
 }
 
 // ═══════════════════════════════════════════
-// Método 1: clic en logo 5 veces rápido
-let _logoClicks = 0, _logoTimer = null;
-function logoClick() {
-  goHome();
-  _logoClicks++;
-  clearTimeout(_logoTimer);
-  if (_logoClicks >= 5) {
-    _logoClicks = 0;
-    window.location.href = 'acceso-b.html';
-    return;
-  }
-  _logoTimer = setTimeout(() => { _logoClicks = 0; }, 1500);
-}
-
-// Método 2: clic en el punto del footer 3 veces
-let _dotClicks = 0, _dotTimer = null;
-function ftDotClick() {
-  _dotClicks++;
-  clearTimeout(_dotTimer);
-  if (_dotClicks >= 3) {
-    _dotClicks = 0;
-    window.location.href = 'acceso-b.html';
-    return;
-  }
-  _dotTimer = setTimeout(() => { _dotClicks = 0; }, 1200);
-}
-
-// Método 3: teclado — escribe "baily" en cualquier momento (desktop)
-let _keyBuf = '';
-document.addEventListener('keypress', e => {
-  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-  _keyBuf += e.key.toLowerCase();
-  if (_keyBuf.includes('baily')) { _keyBuf = ''; window.location.href = 'acceso-b.html'; }
-  if (_keyBuf.length > 10) _keyBuf = _keyBuf.slice(-10);
-});
-
-
-// ═══════════════════════════════════════════
 // BÚSQUEDA DE DIRECCIÓN EN MAPA (Nominatim)
 // ═══════════════════════════════════════════
 let _mapSearchTimer = null;
