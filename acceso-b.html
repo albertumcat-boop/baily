@@ -975,7 +975,15 @@ function initAll() {
 initAll();
 
 // ── SAVE HELPERS ──
-function saveProds()  { localStorage.setItem(IK,   JSON.stringify(PRODUCTS)); }
+function saveProds() {
+  localStorage.setItem(IK, JSON.stringify(PRODUCTS));
+  // Auto-sync individual product change to Firebase (background)
+  if (fbReady && db && window._fbAutoSync !== false) {
+    // Debounce: sync after 2 seconds of no changes
+    clearTimeout(window._fbSyncTimer);
+    window._fbSyncTimer = setTimeout(() => syncToCloud('products'), 2000);
+  }
+}
 function saveCats()   { localStorage.setItem(CATK, JSON.stringify(CATS)); }
 function saveBrands() { localStorage.setItem(BRK,  JSON.stringify(BRANDS)); }
 function saveCfg()    { localStorage.setItem(CK,   JSON.stringify(CFG)); }
@@ -2643,102 +2651,174 @@ function fbLog(msg) {
 }
 
 async function syncToCloud(type) {
-  if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
+  if (!fbReady || !db) { toast('Firebase no configurado — ve a Firebase / Nube', 'err'); return; }
   try {
     fbLog(`⬆️ Subiendo ${type}...`);
+
     if (type === 'products') {
-      const batch = db.batch();
-      PRODUCTS.forEach(p => {
-        // Strip heavy base64 images for Firestore (store as separate field)
-        const doc = {...p};
-        batch.set(db.collection('products').doc(p.id), doc);
-      });
-      await batch.commit();
-      fbLog(`✅ ${PRODUCTS.length} productos subidos`);
+      // Strip base64 images (too large for Firestore 1MB limit)
+      // Images stay in localStorage only
+      const MAX_BATCH = 400;
+      const chunks = [];
+      for (let i = 0; i < PRODUCTS.length; i += MAX_BATCH) chunks.push(PRODUCTS.slice(i, i + MAX_BATCH));
+      for (const chunk of chunks) {
+        const batch = db.batch();
+        chunk.forEach(p => {
+          const doc = {...p};
+          // Remove base64 images — they exceed Firestore's 1MB doc limit
+          delete doc.img;
+          delete doc.imgs;
+          doc.hasImg = !!(p.img || (Array.isArray(p.imgs) && p.imgs.length));
+          batch.set(db.collection('products').doc(p.id), doc);
+        });
+        await batch.commit();
+      }
+      fbLog(`✅ ${PRODUCTS.length} productos subidos (sin imágenes — imágenes quedan en este dispositivo)`);
+
     } else if (type === 'customers') {
       const customers = getCustomers();
+      if (!customers.length) { fbLog('⚠️ No hay clientes para subir'); return; }
       const batch = db.batch();
-      customers.forEach(c => { batch.set(db.collection('customers').doc(c.id || 'c'+Date.now()), c); });
+      customers.forEach(c => {
+        const id = c.id || ('c' + Date.now() + Math.random().toString(36).slice(2,6));
+        batch.set(db.collection('customers').doc(id), {...c, id});
+      });
       await batch.commit();
       fbLog(`✅ ${customers.length} clientes subidos`);
+
     } else if (type === 'orders') {
       const orders = getOrders();
+      if (!orders.length) { fbLog('⚠️ No hay pedidos para subir'); return; }
       const batch = db.batch();
       orders.forEach(o => { batch.set(db.collection('orders').doc(o.id), o); });
       await batch.commit();
       fbLog(`✅ ${orders.length} pedidos subidos`);
+
     } else if (type === 'settings') {
-      await db.collection('settings').doc('general').set(CFG);
+      const cfg = JSON.parse(localStorage.getItem(CK) || '{}');
+      await db.collection('settings').doc('general').set(cfg);
       fbLog('✅ Configuración subida');
+
+    } else if (type === 'promos') {
+      const promos = getPromos();
+      await db.collection('settings').doc('promos').set({list: promos});
+      fbLog(`✅ ${promos.length} promos subidas`);
+
+    } else if (type === 'blog') {
+      const posts = getBlogPosts();
+      await db.collection('settings').doc('blog').set({list: posts});
+      fbLog(`✅ ${posts.length} posts subidos`);
     }
-    toast(`${type} subido a la nube ✓`, 'ok');
-  } catch(e) { fbLog(`❌ Error: ${e.message}`); toast('Error al subir: ' + e.message, 'err'); }
+
+    toast(`✅ ${type} sincronizado`, 'ok');
+  } catch(e) {
+    fbLog(`❌ Error subiendo ${type}: ${e.message}`);
+    toast('Error: ' + e.message, 'err');
+    console.error('syncToCloud error:', e);
+  }
 }
+
 
 async function syncFromCloud(type) {
   if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
   try {
     fbLog(`⬇️ Bajando ${type}...`);
+
     if (type === 'products') {
       const snap = await db.collection('products').get();
-      if (!snap.empty) {
-        PRODUCTS = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        saveProds();
-        fbLog(`✅ ${PRODUCTS.length} productos descargados`);
-        toast(`${PRODUCTS.length} productos descargados ✓`, 'ok');
-      } else { fbLog('⚠️ No hay productos en la nube'); }
+      if (snap.empty) { fbLog('⚠️ No hay productos en la nube'); return; }
+      // Merge cloud data with local images (keep local imgs)
+      const cloudMap = {};
+      snap.docs.forEach(d => { cloudMap[d.id] = {id: d.id, ...d.data()}; });
+      // Preserve local images
+      const merged = Object.values(cloudMap).map(cp => {
+        const local = PRODUCTS.find(p => p.id === cp.id);
+        if (local) { cp.img = local.img || ''; cp.imgs = local.imgs || []; }
+        return cp;
+      });
+      PRODUCTS = merged;
+      saveProds();
+      fbLog(`✅ ${PRODUCTS.length} productos descargados`);
+
     } else if (type === 'customers') {
       const snap = await db.collection('customers').get();
-      if (!snap.empty) {
-        const customers = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        localStorage.setItem(CLK, JSON.stringify(customers));
-        fbLog(`✅ ${customers.length} clientes descargados`);
-        toast(`${customers.length} clientes descargados ✓`, 'ok');
-      } else { fbLog('⚠️ No hay clientes en la nube'); }
+      if (snap.empty) { fbLog('⚠️ No hay clientes en la nube'); return; }
+      const customers = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      localStorage.setItem(CLK, JSON.stringify(customers));
+      fbLog(`✅ ${customers.length} clientes descargados`);
+
     } else if (type === 'orders') {
       const snap = await db.collection('orders').get();
-      if (!snap.empty) {
-        const orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        localStorage.setItem(ORD_KEY, JSON.stringify(orders));
-        fbLog(`✅ ${orders.length} pedidos descargados`);
-        toast(`${orders.length} pedidos descargados ✓`, 'ok');
-      } else { fbLog('⚠️ No hay pedidos en la nube'); }
+      if (snap.empty) { fbLog('⚠️ No hay pedidos en la nube'); return; }
+      const orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      localStorage.setItem(ORD_KEY, JSON.stringify(orders));
+      fbLog(`✅ ${orders.length} pedidos descargados`);
+
     } else if (type === 'settings') {
       const doc = await db.collection('settings').doc('general').get();
       if (doc.exists) {
-        Object.assign(CFG, doc.data());
+        const saved = doc.data();
+        Object.assign(CFG, saved);
         saveCfg();
         fbLog('✅ Configuración descargada');
-        toast('Config descargada ✓', 'ok');
-      } else { fbLog('⚠️ No hay config en la nube'); }
+      } else { fbLog('⚠️ No hay configuración en la nube'); }
+
+    } else if (type === 'promos') {
+      const doc = await db.collection('settings').doc('promos').get();
+      if (doc.exists && doc.data().list) {
+        localStorage.setItem(PROMO_KEY, JSON.stringify(doc.data().list));
+        fbLog(`✅ ${doc.data().list.length} promos descargadas`);
+      }
+
+    } else if (type === 'blog') {
+      const doc = await db.collection('settings').doc('blog').get();
+      if (doc.exists && doc.data().list) {
+        localStorage.setItem(BLOG_KEY, JSON.stringify(doc.data().list));
+        fbLog(`✅ ${doc.data().list.length} posts descargados`);
+      }
     }
-  } catch(e) { fbLog(`❌ Error: ${e.message}`); toast('Error: ' + e.message, 'err'); }
+
+    toast(`✅ ${type} descargado`, 'ok');
+  } catch(e) {
+    fbLog(`❌ Error bajando ${type}: ${e.message}`);
+    toast('Error: ' + e.message, 'err');
+    console.error('syncFromCloud error:', e);
+  }
 }
+
 
 async function syncAllToCloud() {
   if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
-  document.getElementById('fb-sync-log').innerHTML = '';
+  const log = document.getElementById('fb-sync-log');
+  if (log) log.innerHTML = '';
   fbLog('🚀 Iniciando sincronización completa...');
+  await syncToCloud('settings');
   await syncToCloud('products');
   await syncToCloud('customers');
   await syncToCloud('orders');
-  await syncToCloud('settings');
+  await syncToCloud('promos');
+  await syncToCloud('blog');
   fbLog('🎉 ¡Todo subido exitosamente!');
-  toast('¡Todo sincronizado con la nube! ☁️', 'ok');
+  toast('¡Todo sincronizado! ☁️', 'ok');
 }
+
 
 async function syncAllFromCloud() {
   if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
   if (!confirm('¿Bajar todos los datos desde Firebase? Esto reemplazará los datos locales.')) return;
-  document.getElementById('fb-sync-log').innerHTML = '';
+  const log = document.getElementById('fb-sync-log');
+  if (log) log.innerHTML = '';
   fbLog('📥 Descargando todo desde la nube...');
+  await syncFromCloud('settings');
   await syncFromCloud('products');
   await syncFromCloud('customers');
   await syncFromCloud('orders');
-  await syncFromCloud('settings');
+  await syncFromCloud('promos');
+  await syncFromCloud('blog');
   fbLog('🎉 ¡Todo descargado exitosamente!');
-  toast('¡Datos sincronizados desde la nube! ☁️', 'ok');
+  toast('¡Datos restaurados desde la nube! ☁️', 'ok');
 }
+
 
 // Auto-save to Firebase when data changes (if connected)
 async function cloudSave(collection, id, data) {
