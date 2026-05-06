@@ -159,7 +159,31 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--err)}
 
-@media(max-width:900px){.sb{display:none}.sg{grid-template-columns:1fr}.fg{grid-template-columns:1fr}}
+
+/* ── MOBILE SIDEBAR ── */
+.sb-overlay{position:fixed;inset:0;background:rgba(44,36,32,.5);z-index:400;display:none;opacity:0;transition:opacity .3s}
+.sb-overlay.open{display:block;opacity:1}
+.ham-btn{display:none;width:42px;height:42px;border:none;background:none;cursor:pointer;color:var(--md);font-size:22px;align-items:center;justify-content:center;border-radius:var(--r);flex-shrink:0}
+.ham-btn:hover{background:var(--mp)}
+@media(max-width:900px){
+  .sb{display:flex;position:fixed;left:0;top:0;bottom:0;z-index:500;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 20px rgba(44,36,32,.2)}
+  .sb.open{transform:translateX(0)}
+  .ham-btn{display:flex}
+  .main{width:100vw}
+  .content{padding:14px}
+  .sg{grid-template-columns:1fr !important}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  table{font-size:12px}
+  th,td{padding:7px 8px}
+  .tw-hdr{flex-direction:column;align-items:flex-start}
+  .tw-hdr h3{margin-bottom:6px}
+  .fg{grid-template-columns:1fr !important}
+  .mbox{max-width:100%;margin:0;border-radius:var(--rm) var(--rm) 0 0;max-height:96vh}
+  .mbg{align-items:flex-end;padding:0}
+  .img-browser-box{max-height:100vh;border-radius:var(--rm) var(--rm) 0 0}
+  .img-browser-bg{align-items:flex-end;padding:0}
+}
+
 
 /* ── PASSWORD SCREEN ── */
 #pw-screen{position:fixed;inset:0;background:linear-gradient(140deg,var(--md),var(--mauve));z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -326,7 +350,8 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
   </div>
 </div>
 
-<aside class="sb">
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<aside class="sb" id="sb-panel">
   <div class="sb-logo"><h1>B<em>A</em>ILY</h1><p>Panel Admin</p></div>
   <nav class="sb-nav">
     <div class="sb-sec">Principal</div>
@@ -351,10 +376,13 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 
 <div class="main">
   <div class="topbar">
-    <h2 id="pg-title">Dashboard</h2>
-    <div style="display:flex;gap:10px;align-items:center">
-      <span id="top-st" style="font-size:12px;color:var(--ts)"></span>
-      <a href="index.html" class="btn bs btn-sm"><i class="fa-solid fa-arrow-left"></i> Tienda</a>
+    <button class="ham-btn" onclick="toggleSidebar()" id="ham-btn" aria-label="Menú">
+      <i class="fa-solid fa-bars" id="ham-icon"></i>
+    </button>
+    <h2 id="pg-title" style="flex:1">Dashboard</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="top-st" style="font-size:11px;color:var(--ts)"></span>
+      <a href="index.html" class="btn bs btn-sm"><i class="fa-solid fa-store"></i> <span class="hide-xs">Tienda</span></a>
     </div>
   </div>
 
@@ -1023,6 +1051,8 @@ function goPg(name, btn) {
   if (btn) btn.classList.add('on');
   document.getElementById('pg-title').textContent = PAGE_TITLES[name] || name;
   renderPage(name);
+  // Close mobile sidebar after navigation
+  if(window.innerWidth <= 900) closeSidebar();
 }
 
 function renderPage(name) {
@@ -2824,6 +2854,33 @@ function clearPromoImg() {
 }
 
 // ── TAGS in products table (show in admin) ──
+
+
+// ── MOBILE SIDEBAR ──
+function toggleSidebar() {
+  const sb  = document.getElementById('sb-panel');
+  const ov  = document.getElementById('sb-overlay');
+  const ico = document.getElementById('ham-icon');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+  ico.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeSidebar() {
+  const sb  = document.getElementById('sb-panel');
+  const ov  = document.getElementById('sb-overlay');
+  const ico = document.getElementById('ham-icon');
+  sb.classList.remove('open');
+  ov.classList.remove('open');
+  if(ico) ico.className = 'fa-solid fa-bars';
+  document.body.style.overflow = '';
+}
+// Close sidebar when a nav item is clicked on mobile
+document.querySelectorAll('.sb-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if(window.innerWidth <= 900) closeSidebar();
+  });
+});
 
 </script>
 </body>
