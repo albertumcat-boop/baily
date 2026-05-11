@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --mauve:#8F7F8A;--md:#6E6070;--mm:#A090A0;--mp:#EDE8EB;
@@ -626,12 +628,77 @@ const CFG_DEFAULT = {tasaBCV:47.15,iva:16,descPct:35,descActive:false,deliveryCo
 
 let CFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
 
+async function loadCFGFromFirestore() {
+  if (!_storeDb) return;
+  try {
+    const doc = await _storeDb.collection('settings').doc('general').get();
+    if (doc.exists) {
+      const saved = doc.data();
+      Object.assign(CFG, saved);
+      localStorage.setItem(CK, JSON.stringify(CFG));
+      // Update BCV display
+      const el = document.getElementById('tasa-display');
+      if (el && CFG.tasaBCV) el.textContent = 'Bs. ' + CFG.tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2}) + ' / $';
+      console.log('[BAILY Store] Config cargada desde Firestore, IVA:', CFG.iva);
+    }
+  } catch(e) { console.log('[BAILY Store] Error cargando config:', e.message); }
+}
+
+// Firebase config for store (read-only access to products)
+var _storeDb = null;
+(function initStoreFirebase() {
+  try {
+    var cfg = {
+      apiKey: 'AIzaSyC0QOfJhOPSySLTeFMQpef3lPR2WUBQt3c',
+      authDomain: 'baily-store.firebaseapp.com',
+      projectId: 'baily-store',
+      storageBucket: 'baily-store.firebasestorage.app',
+      messagingSenderId: '695806923219',
+      appId: '1:695806923219:web:465942afd1dc3f32dadf26'
+    };
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    _storeDb = firebase.firestore();
+    console.log('[BAILY Store] Firebase conectado');
+  } catch(e) {
+    console.log('[BAILY Store] Firebase no disponible, usando localStorage');
+  }
+})();
+
 function loadProds(){
   try{const s=localStorage.getItem(IK);if(s)return JSON.parse(s);}catch(e){}
   localStorage.setItem(IK,JSON.stringify(PROD_DEFAULT));
   return PROD_DEFAULT;
 }
 let PRODUCTS = loadProds();
+
+// Load fresh products from Firestore and refresh the store
+async function loadProdsFromFirestore() {
+  if (!_storeDb) return;
+  try {
+    console.log('[BAILY Store] Cargando productos desde Firestore...');
+    const snap = await _storeDb.collection('products').get();
+    if (snap.empty) { console.log('[BAILY Store] No hay productos en Firestore'); return; }
+    const cloudProds = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    // Merge: cloud data wins over local defaults, keep local images if cloud has none
+    cloudProds.forEach(cp => {
+      const local = PRODUCTS.find(p => p.id === cp.id);
+      if (local && !cp.img && local.img) cp.img = local.img;
+      if (local && (!cp.imgs || !cp.imgs.length) && local.imgs && local.imgs.length) cp.imgs = local.imgs;
+    });
+    PRODUCTS = cloudProds;
+    localStorage.setItem(IK, JSON.stringify(PRODUCTS));
+    console.log('[BAILY Store] ' + PRODUCTS.length + ' productos cargados desde Firestore');
+    // Refresh the visible UI
+    if (selCat) renderProds();
+    else if (selBrand) renderCats(selBrand);
+    else renderBrands();
+    // Refresh search if active
+    const srchVal = document.getElementById('srch-inp') && document.getElementById('srch-inp').value;
+    if (srchVal && srchVal.trim()) onSearch(srchVal);
+  } catch(e) {
+    console.log('[BAILY Store] Error cargando desde Firestore:', e.message);
+  }
+}
 let cart  = JSON.parse(localStorage.getItem('baily_cart')||'[]');
 let favs  = JSON.parse(localStorage.getItem('baily_favs')||'[]');
 let CUSTOMERS = JSON.parse(localStorage.getItem(CLK)||'[]');
@@ -1449,6 +1516,13 @@ renderBrands();
 updBadge();
 renderPromoSlider();
 renderBlog();
+// Load fresh data from Firestore (updates products, config in background)
+setTimeout(async () => {
+  await loadCFGFromFirestore();
+  await loadProdsFromFirestore();
+  renderPromoSlider();
+  renderBlog();
+}, 800);
 
 
 // ═══════════════════════════════════════════
