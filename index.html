@@ -378,6 +378,20 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 .promo-slide-img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;z-index:0}
 .promo-slide-content{position:relative;z-index:1}
 
+
+/* TONE SELECTOR */
+.tone-wrap{margin-bottom:16px}
+.tone-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.tone-lbl{font-size:12px;font-weight:600;color:var(--ts);text-transform:uppercase;letter-spacing:.5px}
+.tone-sel-lbl{font-size:13px;color:var(--mauve);font-weight:500}
+.tones-grid{display:flex;gap:8px;flex-wrap:wrap}
+.tone-btn{padding:7px 14px;border-radius:var(--rm);border:2px solid var(--mp);background:var(--white);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ts);transition:all .2s;white-space:nowrap}
+.tone-btn:hover{border-color:var(--mauve);color:var(--mauve)}
+.tone-btn.on{border-color:var(--mauve);background:var(--mauve);color:#fff}
+.tone-btn.sold{background:var(--cream2);color:var(--tl);cursor:not-allowed;border-style:dashed}
+.tone-info{font-size:11px;color:var(--tl);margin-top:8px}
+
+var _selTone=null;
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 productos y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores esta semana", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío nacional gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto de mañana a noche.", "date": "2026-05-01", "active": true}, {"id": "bl2", "title": "Tendencias de maquillaje 2026", "category": "Tendencias", "type": "video", "url": "", "thumb": "", "excerpt": "Lo que se lleva esta temporada: piel de vidrio, labios glossy y mucho más.", "date": "2026-04-20", "active": true}]</script>
@@ -576,6 +590,7 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 <div class="toast" id="toast"></div>
 
 <script>// ── GLOBAL VARS ──
+var _selTone = null;
 var promoI = 0, promoTimer = null;
 var _lpTimer = null;
 var _logoClicks = 0, _logoTimer = null;
@@ -846,6 +861,7 @@ function openM(id){
       ${p.size?`<span class="m-pill">${p.size}</span>`:''}
     </div>
     ${p.desc?`<div class="m-desc">${p.desc}</div>`:''}
+    ${Array.isArray(p.tones)&&p.tones.length?buildToneHtml(p):''}
     <div class="m-qty">
       <span style="font-size:14px;font-weight:500">Cantidad:</span>
       <div class="m-qc">
@@ -855,8 +871,8 @@ function openM(id){
       </div>
     </div>
     <div class="m-actions">
-      <button class="m-add" onclick="addCurr()" ${out?'disabled':''}>
-        <i class="fa-solid fa-cart-plus"></i> ${out?'Agotado':'Añadir al carrito'}
+      <button class="m-add" onclick="addCurr()" ${(out&&!(Array.isArray(p.tones)&&p.tones.length))?'disabled':''} id="m-add-btn">
+        <i class="fa-solid fa-cart-plus"></i> ${out&&!(Array.isArray(p.tones)&&p.tones.length)?'Agotado':Array.isArray(p.tones)&&p.tones.length?'Selecciona un tono':'Añadir al carrito'}
       </button>
       <button class="m-wa" onclick="msgWA('${p.id}')" title="Consultar por WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
     </div>
@@ -871,11 +887,26 @@ function closeM(e){if(e.target===document.getElementById('m-overlay'))closeMD();
 function closeMD(){document.getElementById('m-overlay').classList.remove('open');document.body.style.overflow='';}
 function chgQ(d){if(!curP)return;curQty=Math.max(1,Math.min(+curP.stock||99,curQty+d));document.getElementById('m-qv').textContent=curQty;}
 function addCurr(){
-  if(!curP||(+curP.stock||0)<=0)return;
-  const ex=cart.find(i=>i.productId===curP.id);
-  if(ex)ex.qty=Math.min(ex.qty+curQty,+curP.stock||99);
-  else cart.push({productId:curP.id,name:curP.name,brand:curP.brand,price:+curP.price,qty:curQty,img:curP.img||'',catId:curP.catId});
-  saveCart();closeMD();openCart();toast('¡Añadido al carrito! 🛍️','ok');
+  if(!curP) return;
+  var hasTones=Array.isArray(curP.tones)&&curP.tones.length>0;
+  if(hasTones){
+    if(_selTone===null){toast('⚠️ Elige un tono primero','err');return;}
+    var tone=curP.tones[_selTone];
+    if(!tone||(+tone.stock||0)<=0){toast('Este tono está agotado','err');return;}
+    var cartId=curP.id+'_t'+_selTone;
+    var ex=cart.find(function(i){return i.productId===cartId;});
+    if(ex) ex.qty=Math.min(ex.qty+curQty,+tone.stock);
+    else cart.push({productId:cartId,realId:curP.id,toneIdx:_selTone,toneName:tone.name,
+      name:curP.name+' — '+tone.name,brand:curP.brand,
+      price:+(tone.price||curP.price),qty:curQty,img:curP.img||'',catId:curP.catId});
+    saveCart();closeMD();openCart();toast('¡'+tone.name+' añadido! 🛍️','ok');
+  } else {
+    if((+curP.stock||0)<=0) return;
+    var ex2=cart.find(function(i){return i.productId===curP.id;});
+    if(ex2) ex2.qty=Math.min(ex2.qty+curQty,+curP.stock||99);
+    else cart.push({productId:curP.id,name:curP.name,brand:curP.brand,price:+curP.price,qty:curQty,img:curP.img||'',catId:curP.catId});
+    saveCart();closeMD();openCart();toast('¡Añadido al carrito! 🛍️','ok');
+  }
 }
 function msgWA(id){
   const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
@@ -1857,6 +1888,40 @@ function renderRelated(p){
         </div>
       </div>`).join('')}
     </div>`;
+}
+
+
+// === TONE SELECTOR ===
+function buildToneHtml(p) {
+  if (!Array.isArray(p.tones) || !p.tones.length) return "";
+  _selTone = null;
+  var rows = p.tones.map(function(t, i) {
+    var stk = +t.stock || 0;
+    var cls = stk <= 0 ? "tone-btn sold" : "tone-btn";
+    var click = stk > 0 ? "selectTone(" + i + ")" : "";
+    return "<button class=\"" + cls + "\" id=\"tone-" + i + "\" onclick=\"" + click + "\">" + t.name + "</button>";
+  });
+  return "<div class=\"tone-wrap\">" +
+    "<div class=\"tone-lbl-row\"><span class=\"tone-lbl\">Selecciona tono:</span><span class=\"tone-sel-lbl\" id=\"tone-info\">Elige un tono</span></div>" +
+    "<div class=\"tones-grid\">" + rows.join("") + "</div>" +
+    "<div class=\"tone-info\" id=\"tone-stock\"></div>" +
+    "</div>";
+}
+
+function selectTone(i) {
+  if (!curP || !Array.isArray(curP.tones)) return;
+  var tone = curP.tones[i];
+  if (!tone || (+tone.stock||0) <= 0) return;
+  _selTone = i;
+  document.querySelectorAll(".tone-btn").forEach(function(b, j) {
+    b.classList.toggle("on", j === i);
+  });
+  var lbl = document.getElementById("tone-info");
+  var stk = document.getElementById("tone-stock");
+  if (lbl) lbl.textContent = tone.name + " — seleccionado";
+  if (stk) stk.textContent = (+tone.stock||0) + " unidades disponibles";
+  var addBtn = document.querySelector(".m-add");
+  if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = "<i class=\"fa-solid fa-cart-plus\"></i> Agregar — " + tone.name; }
 }
 
 </script>
