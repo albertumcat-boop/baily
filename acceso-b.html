@@ -316,6 +316,15 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 /* Upload progress */
 .compress-badge{background:var(--ok);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px}
 
+
+/* ADMIN TONES */
+.tone-admin-row{display:flex;align-items:center;gap:8px;padding:8px;background:var(--cream2);border-radius:var(--r);margin-bottom:6px}
+.tone-admin-nm{flex:1;height:34px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;outline:none}
+.tone-admin-nm:focus{border-color:var(--mauve)}
+.tone-admin-stk{width:70px;height:34px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:13px;font-family:inherit;text-align:center;outline:none}
+.tone-admin-pr{width:78px;height:34px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:13px;font-family:inherit;outline:none}
+.tone-admin-del{width:30px;height:30px;border:none;background:var(--err);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto.", "date": "2026-05-01", "active": true}]</script>
@@ -637,18 +646,32 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           <div class="tw-hdr"><h3>☁️ Sincronización con la Nube</h3></div>
           <div style="padding:18px">
             <div style="font-size:13px;color:var(--ts);margin-bottom:16px;line-height:1.7">
-              Sube todos tus datos a Firebase para acceder desde cualquier dispositivo. 
-              Una vez sincronizado, los cambios se guardan automáticamente en la nube.
+              Sube todos tus datos a Firebase para acceder desde cualquier dispositivo.
+              Los cambios de stock, precios y clientes se sincronizan automáticamente.
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-              <button class="btn bp" onclick="syncToCloud('products')"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
-              <button class="btn bs" onclick="syncFromCloud('products')"><i class="fa-solid fa-download"></i> Bajar Inventario</button>
-              <button class="btn bp" onclick="syncToCloud('customers')"><i class="fa-solid fa-upload"></i> Subir Clientes</button>
-              <button class="btn bs" onclick="syncFromCloud('customers')"><i class="fa-solid fa-download"></i> Bajar Clientes</button>
-              <button class="btn bp" onclick="syncToCloud('orders')"><i class="fa-solid fa-upload"></i> Subir Pedidos</button>
-              <button class="btn bs" onclick="syncFromCloud('orders')"><i class="fa-solid fa-download"></i> Bajar Pedidos</button>
-              <button class="btn bp" onclick="syncToCloud('settings')"><i class="fa-solid fa-upload"></i> Subir Config</button>
-              <button class="btn bs" onclick="syncFromCloud('settings')"><i class="fa-solid fa-download"></i> Bajar Config</button>
+            <!-- Image storage note -->
+            <div style="background:#E8F5EE;border-radius:var(--rm);padding:12px 14px;margin-bottom:16px;border:1.5px solid var(--ok)">
+              <div style="font-weight:600;font-size:13px;color:var(--ok);margin-bottom:4px">
+                🖼️ Fotos → Firestore (sin servicios externos)
+              </div>
+              <div style="font-size:12px;color:var(--ts);line-height:1.6">
+                Las fotos se comprimen automáticamente a ~40KB y se guardan en Firestore.<br>
+                Sin Cloudinary, sin Storage, sin costos adicionales. Todo en tu base de datos gratuita.
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+              <button class="btn bp btn-sm" onclick="syncToCloud('products')"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('products')"><i class="fa-solid fa-download"></i> Bajar Inventario</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('customers')"><i class="fa-solid fa-upload"></i> Subir Clientes</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('customers')"><i class="fa-solid fa-download"></i> Bajar Clientes</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('orders')"><i class="fa-solid fa-upload"></i> Subir Pedidos</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('orders')"><i class="fa-solid fa-download"></i> Bajar Pedidos</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('settings')"><i class="fa-solid fa-upload"></i> Subir Config</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('settings')"><i class="fa-solid fa-download"></i> Bajar Config</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('promos')"><i class="fa-solid fa-upload"></i> Subir Promos</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('promos')"><i class="fa-solid fa-download"></i> Bajar Promos</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('blog')"><i class="fa-solid fa-upload"></i> Subir Blog</button>
+              <button class="btn bs btn-sm" onclick="syncFromCloud('blog')"><i class="fa-solid fa-download"></i> Bajar Blog</button>
             </div>
             <button class="btn bp" style="width:100%" onclick="syncAllToCloud()">
               <i class="fa-solid fa-cloud-arrow-up"></i> Subir TODO a la nube (primera vez)
@@ -671,7 +694,8 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
             <div style="margin-bottom:8px"><strong style="color:var(--md)">3.</strong> En el panel del proyecto, clic en el ícono <strong>&lt;/&gt;</strong> (Web) → registra tu app con nombre "baily-web"</div>
             <div style="margin-bottom:8px"><strong style="color:var(--md)">4.</strong> Firebase te mostrará las credenciales. <strong>Copia cada valor</strong> en los campos de arriba</div>
             <div style="margin-bottom:8px"><strong style="color:var(--md)">5.</strong> En el menú izquierdo: <strong>Build → Firestore Database</strong> → Crear base de datos → Modo prueba → Habilitar</div>
-            <div style="margin-bottom:8px"><strong style="color:var(--md)">6.</strong> Vuelve aquí → Guarda las credenciales → <strong>"Subir TODO a la nube"</strong></div>
+            <div style="margin-bottom:8px"><strong style="color:var(--md)">6.</strong> Las fotos se guardan automáticamente en Firestore — no necesitas ningún servicio adicional ✅</div>
+            <div style="margin-bottom:8px"><strong style="color:var(--md)">7.</strong> Vuelve aquí → Guarda las credenciales → <strong>"Subir TODO a la nube"</strong></div>
             <div style="background:var(--mp);padding:12px;border-radius:var(--r);margin-top:12px">
               <strong>✅ Plan gratis (Spark):</strong> 1GB almacenamiento · 50,000 lecturas/día · 20,000 escrituras/día. Más que suficiente para BAILY.
             </div>
@@ -1026,9 +1050,11 @@ function saveProds() {
   localStorage.setItem(IK, JSON.stringify(PRODUCTS));
   // Auto-sync individual product change to Firebase (background)
   if (fbReady && db && window._fbAutoSync !== false) {
-    // Debounce: sync after 2 seconds of no changes
+    // Debounce: sync after 1.5 seconds of no changes
     clearTimeout(window._fbSyncTimer);
-    window._fbSyncTimer = setTimeout(() => syncToCloud('products'), 2000);
+    window._fbSyncTimer = setTimeout(() => {
+      syncToCloud('products').catch(e => console.log('Auto-sync error:', e));
+    }, 1500);
   }
 }
 function saveCats()   { localStorage.setItem(CATK, JSON.stringify(CATS)); }
@@ -1257,6 +1283,7 @@ function openAddP() {
   document.getElementById('pm-best').checked = false;
   document.getElementById('pm-imgs-data').value = '[]';
   document.getElementById('pm-tags').value = '';
+  document.getElementById('tones-list').innerHTML = '';
   document.getElementById('pm-eid').value = '';
   document.getElementById('pm-imgs-preview').innerHTML = '';
   fillPMSelects();
@@ -1275,6 +1302,11 @@ function editP(id) {
   document.getElementById('pm-sz').value   = p.size    || '';
   document.getElementById('pm-desc').value = p.desc    || '';
   document.getElementById('pm-tags').value = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
+  // Load tones
+  document.getElementById('tones-list').innerHTML = '';
+  if (Array.isArray(p.tones) && p.tones.length) {
+    p.tones.forEach(t => addToneRow(t));
+  }
   document.getElementById('pm-feat').checked = !!p.featured;
   document.getElementById('pm-best').checked = !!p.bestseller;
   const _ims = Array.isArray(p.imgs) && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
@@ -1318,6 +1350,7 @@ function saveP() {
     imgs:      JSON.parse(document.getElementById('pm-imgs-data').value || '[]'),
     img:       (JSON.parse(document.getElementById('pm-imgs-data').value || '[]'))[0] || '',
     tags:      document.getElementById('pm-tags').value.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean),
+    tones:     collectTones(),
     featured:  document.getElementById('pm-feat').checked,
     bestseller:document.getElementById('pm-best').checked,
     emoji:     CATS[catId]?.icon || '💄'
@@ -1481,17 +1514,24 @@ function uploadPhoto(id, inp) {
   if (remaining <= 0) { toast('Ya tiene 5 fotos (máximo)', 'err'); return; }
   const toProcess = files.slice(0, remaining);
   let done = 0;
-  toast(`Comprimiendo ${toProcess.length} foto(s)...`);
+  toast('Comprimiendo y subiendo ' + toProcess.length + ' foto(s)...');
   toProcess.forEach(file => {
-    compressImage(file, (dataUrl, kb) => {
-      p.imgs.push(dataUrl);
+    compressImage(file, async (dataUrl, kb) => {
+      const prodName = (p.name || 'prod').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const finalUrl = await uploadToStorage(dataUrl, prodName + '_' + p.id);
+      p.imgs.push(finalUrl);
       p.img = p.imgs[0];
       done++;
-      if (done === toProcess.length) { saveProds(); renderPhotos(); toast(`${done} foto(s) · ${kb}KB ✓`, 'ok'); }
+      if (done === toProcess.length) {
+        saveProds();
+        renderPhotos();
+        toast(done + ' foto(s) guardadas ✓', 'ok');
+      }
     });
   });
   inp.value = '';
 }
+
 
 function removePhoto(id, idx) {
   const p = PRODUCTS.find(x => x.id === id); if (!p) return;
@@ -1730,6 +1770,10 @@ function getOrders() {
 }
 function saveOrders(orders) {
   localStorage.setItem(ORD_KEY, JSON.stringify(orders));
+  if (fbReady && db) {
+    clearTimeout(window._fbOrderTimer);
+    window._fbOrderTimer = setTimeout(() => syncToCloud('orders').catch(()=>{}), 1500);
+  }
 }
 
 function updateOrderBadge() {
@@ -2385,15 +2429,15 @@ function compressImage(file, callback) {
 
 function handleImg(inp, prevId, dataId) {
   const file = inp.files[0]; if (!file) return;
-  compressImage(file, (dataUrl, kb) => {
-    document.getElementById(dataId).value = dataUrl;
+  compressImage(file, async (dataUrl, kb) => {
+    const finalUrl = await uploadToStorage(dataUrl, 'misc_' + Date.now());
+    document.getElementById(dataId).value = finalUrl;
     const prev = document.getElementById(prevId);
-    if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
-    toast(`Foto comprimida · ${kb}KB ✓`, 'ok');
+    if (prev) { prev.src = finalUrl; prev.style.display = 'block'; }
+    toast('Foto guardada ✓', 'ok');
   });
   inp.value = '';
 }
-
 
 
 function openImgBrowser(context) {
@@ -2478,31 +2522,30 @@ function applyGallerySelection() {
 
 function handleMultiImg(input) {
   const files = Array.from(input.files);
-  const preview = document.getElementById('pm-imgs-preview');
   let current = [];
   try { current = JSON.parse(document.getElementById('pm-imgs-data').value || '[]'); } catch(e) {}
-
   const remaining = 5 - current.length;
   if (remaining <= 0) { toast('Ya tienes 5 fotos (máximo)', 'err'); return; }
   const toProcess = files.slice(0, remaining);
-  let processed = 0;
-
+  let done = 0;
+  toast('Comprimiendo y subiendo ' + toProcess.length + ' foto(s)...');
   toProcess.forEach(file => {
-    if (file.size > 3 * 1024 * 1024) { toast(`${file.name} es muy grande (máx 3MB)`, 'err'); processed++; return; }
-    const r = new FileReader();
-    r.onload = e => {
-      current.push(e.target.result);
-      processed++;
-      if (processed === toProcess.length) {
+    compressImage(file, async (dataUrl, kb) => {
+      // Upload to Firebase Storage if available
+      const prodName = (document.getElementById('pm-nm').value || 'prod').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const finalUrl = await uploadToStorage(dataUrl, prodName);
+      current.push(finalUrl);
+      done++;
+      if (done === toProcess.length) {
         document.getElementById('pm-imgs-data').value = JSON.stringify(current);
         renderImgPreviews(current);
-        toast(`${toProcess.length} foto(s) agregada(s) ✓`, 'ok');
+        toast(done + ' foto(s) guardadas ✓', 'ok');
       }
-    };
-    r.readAsDataURL(file);
+    });
   });
   input.value = '';
 }
+
 
 function renderImgPreviews(imgs) {
   const el = document.getElementById('pm-imgs-preview');
@@ -2544,6 +2587,7 @@ function initFirebase(config) {
     }
     db = firebase.firestore();
     fbReady = true;
+    initStorage();
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -2573,14 +2617,14 @@ const _REAL_FB_CFG = {
 })();
 
 function renderFirebasePage() {
-  const cfg = loadFBConfig();
+  const cfg = loadFBConfig() || _REAL_FB_CFG;
   if (cfg) {
-    document.getElementById('fb-apiKey').value           = cfg.apiKey || '';
-    document.getElementById('fb-authDomain').value       = cfg.authDomain || '';
-    document.getElementById('fb-projectId').value        = cfg.projectId || '';
-    document.getElementById('fb-storageBucket').value    = cfg.storageBucket || '';
+    document.getElementById('fb-apiKey').value            = cfg.apiKey || '';
+    document.getElementById('fb-authDomain').value        = cfg.authDomain || '';
+    document.getElementById('fb-projectId').value         = cfg.projectId || '';
+    document.getElementById('fb-storageBucket').value     = cfg.storageBucket || '';
     document.getElementById('fb-messagingSenderId').value = cfg.messagingSenderId || '';
-    document.getElementById('fb-appId').value            = cfg.appId || '';
+    document.getElementById('fb-appId').value             = cfg.appId || '';
   }
   updateFBStatus();
 }
@@ -2597,7 +2641,7 @@ function updateFBStatus() {
     dot.style.background = 'var(--ok)';
     txt.textContent = '✅ Conectado a Firebase';
     const cfg = loadFBConfig();
-    det.textContent = `Proyecto: ${cfg?.projectId || '—'} · Los datos se sincronizan con la nube.`;
+    det.textContent = 'Proyecto: ' + (cfg?.projectId || '—') + ' · Firestore: ✅ · Fotos: comprimidas en Firestore';
     if (pan) pan.style.display = 'block';
   } else {
     card.style.background = '#FFF8E1'; card.style.border = '1.5px solid var(--warn)';
@@ -2628,7 +2672,7 @@ async function testFBConnection() {
   if (!fbReady || !db) { toast('Configura Firebase primero', 'err'); return; }
   try {
     await db.collection('_test').doc('ping').set({ ts: Date.now() });
-    toast('✅ Conexión exitosa con Firebase Firestore!', 'ok');
+    toast('✅ Firestore conectado! Las fotos se guardan en Firestore automáticamente.', 'ok');
   } catch(e) {
     toast('❌ Error: ' + e.message, 'err');
   }
@@ -2658,24 +2702,20 @@ async function syncToCloud(type) {
     fbLog(`⬆️ Subiendo ${type}...`);
 
     if (type === 'products') {
-      // Strip base64 images (too large for Firestore 1MB limit)
-      // Images stay in localStorage only
       const MAX_BATCH = 400;
       const chunks = [];
       for (let i = 0; i < PRODUCTS.length; i += MAX_BATCH) chunks.push(PRODUCTS.slice(i, i + MAX_BATCH));
       for (const chunk of chunks) {
         const batch = db.batch();
         chunk.forEach(p => {
+          // Images are compressed to ~40KB — safe to store in Firestore (1MB limit)
           const doc = {...p};
-          // Remove base64 images — they exceed Firestore's 1MB doc limit
-          delete doc.img;
-          delete doc.imgs;
-          doc.hasImg = !!(p.img || (Array.isArray(p.imgs) && p.imgs.length));
           batch.set(db.collection('products').doc(p.id), doc);
         });
         await batch.commit();
       }
-      fbLog(`✅ ${PRODUCTS.length} productos subidos (sin imágenes — imágenes quedan en este dispositivo)`);
+      const withImgs = PRODUCTS.filter(p => p.img && p.img.length > 10).length;
+      fbLog('✅ ' + PRODUCTS.length + ' productos subidos · ' + withImgs + ' con fotos en Firestore');
 
     } else if (type === 'customers') {
       const customers = getCustomers();
@@ -2881,6 +2921,105 @@ document.querySelectorAll('.sb-btn').forEach(btn => {
     if(window.innerWidth <= 900) closeSidebar();
   });
 });
+
+
+// === ADMIN TONE MANAGEMENT ===
+function addToneRow(data) {
+  data = data || {};
+  const list = document.getElementById('tones-list');
+  const idx = list.children.length;
+  const row = document.createElement('div');
+  row.className = 'tone-admin-row';
+  row.innerHTML = `
+    <input class="tone-admin-nm" type="text" placeholder="Nombre del tono (ej: Tono 1, Nude...)" value="${data.name||''}" data-field="name">
+    <input class="tone-admin-stk" type="number" placeholder="Stock" value="${data.stock||0}" min="0" data-field="stock" title="Stock">
+    <input class="tone-admin-pr" type="number" placeholder="Precio $" value="${data.price||''}" step="0.01" min="0" data-field="price" title="Precio (deja vacío para usar el precio del producto)">
+    <button class="tone-admin-del" onclick="this.parentElement.remove()" title="Eliminar tono"><i class="fa-solid fa-trash"></i></button>`;
+  list.appendChild(row);
+}
+
+function collectTones() {
+  const rows = document.querySelectorAll('#tones-list .tone-admin-row');
+  const tones = [];
+  rows.forEach(row => {
+    const name  = row.querySelector('[data-field="name"]').value.trim();
+    const stock = parseInt(row.querySelector('[data-field="stock"]').value) || 0;
+    const priceVal = row.querySelector('[data-field="price"]').value;
+    const price = priceVal ? parseFloat(priceVal) : null;
+    if (name) tones.push({ name, stock, price });
+  });
+  return tones;
+}
+
+// Also update inventory page to show tones
+
+
+// === FIREBASE STORAGE FOR IMAGES ===
+var storage = null;
+
+
+// ── IMAGE STORAGE: compressed base64 → Firestore ──
+// All images compressed to ~40KB so they fit in Firestore's 1MB document limit
+// Same approach as AVIPET — no external services needed
+
+async function uploadToStorage(base64DataUrl, filename) {
+  // Always compress aggressively for Firestore
+  return await compressToFirestoreSize(base64DataUrl);
+}
+
+// Compress to ~40KB — fits comfortably in Firestore 1MB limit
+// 5 images × 40KB = 200KB per product document
+async function compressToFirestoreSize(base64DataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 600;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        const r = Math.min(MAX/w, MAX/h);
+        w = Math.round(w*r);
+        h = Math.round(h*r);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let q = 0.6, result;
+      do {
+        result = canvas.toDataURL('image/jpeg', q);
+        q -= 0.07;
+      } while (result.length > 55000 && q > 0.15); // target ~40KB
+      console.log('[BAILY] Image compressed to', Math.round(result.length*0.75/1024), 'KB at quality', q.toFixed(2));
+      resolve(result);
+    };
+    img.src = base64DataUrl;
+  });
+}
+
+async function deleteFromStorage(url) {
+  // Images in Firestore are deleted when the product document is updated
+  return;
+}
+
+function initStorage() {
+  // Images stored as compressed base64 in Firestore
+  // No external storage service needed
+  console.log('[BAILY] Image storage: Firestore (compressed base64)');
+}
+
+function setToneSt(pid, toneIdx) {
+  var p = PRODUCTS.find(function(x){return x.id===pid;});
+  if(!p||!Array.isArray(p.tones)||!p.tones[toneIdx]) return;
+  var el = document.getElementById('sf-'+pid+'-t'+toneIdx);
+  if(!el) return;
+  var v = parseInt(el.value);
+  if(isNaN(v)||v<0){toast('Valor inv\u00e1lido','err');return;}
+  p.tones[toneIdx].stock = v;
+  p.stock = p.tones.reduce(function(s,t){return s+(+t.stock||0);},0);
+  saveProds();renderInv();toast('Stock de '+p.tones[toneIdx].name+' actualizado \u2713','ok');
+}
+
+
+
 
 </script>
 </body>
