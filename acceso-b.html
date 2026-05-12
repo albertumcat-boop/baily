@@ -3017,7 +3017,7 @@ var storage = null;
 // CLOUDINARY — IMAGE HOSTING (GRATUITO)
 // 25GB free · no credit card · works on any device
 // ═══════════════════════════════════════════
-const CLD_KEY = 'baily_cld';
+var CLD_KEY = 'baily_cld';
 
 function getCLD() {
   try { return JSON.parse(localStorage.getItem(CLD_KEY) || 'null'); } catch(e) { return null; }
@@ -3079,19 +3079,23 @@ async function deleteFromStorage(url) {
 }
 
 function initStorage() {
-  // Auto-configure Cloudinary with embedded credentials
-  const existing = getCLD();
-  if (!existing || !existing.cloud) {
-    localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
-    console.log('[BAILY] Cloudinary auto-configured: dsu0vdcvx / baily_upload');
+  try {
+    var _cldKey = 'baily_cld';
+    var existing = null;
+    try { existing = JSON.parse(localStorage.getItem(_cldKey) || 'null'); } catch(e2) {}
+    if (!existing || !existing.cloud) {
+      localStorage.setItem(_cldKey, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
+      console.log('[BAILY] Cloudinary configured: dsu0vdcvx');
+    }
+    // Fill inputs if visible
+    var n = document.getElementById('cld-name');
+    var p = document.getElementById('cld-preset');
+    var cfg = JSON.parse(localStorage.getItem(_cldKey) || 'null');
+    if (n && cfg && !n.value) n.value = cfg.cloud || '';
+    if (p && cfg && !p.value) p.value = cfg.preset || '';
+  } catch(e) {
+    console.log('[BAILY] initStorage error:', e.message);
   }
-  updateCLDStatus();
-  // Also fill inputs immediately if they exist
-  const n = document.getElementById('cld-name');
-  const p = document.getElementById('cld-preset');
-  const cfg = getCLD();
-  if (n && cfg) n.value = cfg.cloud || '';
-  if (p && cfg) p.value = cfg.preset || '';
 }
 
 function setToneSt(pid, toneIdx) {
@@ -3197,12 +3201,13 @@ async function testCLD() {
     });
     const data = await r.json();
     if (data.error) throw new Error(data.error.message);
-    res.innerHTML = '✅ <strong>¡Funciona!</strong> Las fotos ahora se guardan en la nube y se ven en cualquier dispositivo.';
-    res.style.color = 'var(--ok)';
+    if (res) { res.innerHTML = '✅ <strong>¡Funciona!</strong> Cloudinary conectado. Las fotos se guardarán en la nube.'; res.style.color = 'var(--ok)'; }
+    toast('✅ Cloudinary funcionando correctamente!', 'ok');
     updateCLDStatus();
   } catch(e) {
-    res.textContent = '❌ Error: ' + e.message + ' — Revisa el Cloud Name y Upload Preset';
-    res.style.color = 'var(--err)';
+    if (res) { res.textContent = '❌ Error: ' + e.message; res.style.color = 'var(--err)'; }
+    toast('❌ Error: ' + e.message, 'err');
+    console.error('[BAILY] Cloudinary test error:', e);
   }
 }
 
