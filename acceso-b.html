@@ -711,7 +711,14 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         <div class="sc">
           <h3><i class="fa-solid fa-dollar-sign" style="color:var(--mauve);margin-right:6px"></i>Precios & Tasa</h3>
           <div class="srow"><span class="slbl">Tasa BCV (Bs por $)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-tasa" style="width:85px;height:34px" step="0.01"><button class="btn bp btn-sm" onclick="saveSF('tasaBCV','s-tasa',true)">Guardar</button></div></div>
-          <div class="srow"><span class="slbl">IVA (%)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-iva" style="width:65px;height:34px" step="0.1"><button class="btn bp btn-sm" onclick="saveSF('iva','s-iva',true)">Guardar</button></div></div>
+          <div class="srow">
+            <span class="slbl">IVA (%) <span id="iva-lock-icon" style="color:var(--mauve);cursor:pointer;margin-left:4px" onclick="toggleIvaLock()" title="Bloquear/desbloquear IVA">🔓</span></span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="finp" type="number" id="s-iva" style="width:65px;height:34px" step="0.1">
+              <button class="btn bp btn-sm" onclick="saveIvaWithLock()">Guardar</button>
+              <button class="btn bs btn-sm" id="iva-lock-btn" onclick="toggleIvaLock()" title="Bloquear para que no cambie">🔒 Bloquear</button>
+            </div>
+          </div>
           <div class="srow"><span class="slbl">Descuento activo (%)</span><div style="display:flex;gap:8px;align-items:center"><label class="tg"><input type="checkbox" id="s-don"><span class="tg-sl"></span></label><input class="finp" type="number" id="s-dpct" style="width:60px;height:34px"><button class="btn bp btn-sm" onclick="saveDisc()">Guardar</button></div></div>
         </div>
         <div class="sc">
@@ -769,6 +776,14 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
       <div class="fgrp"><span class="flbl">Stock inicial *</span><input class="finp" type="number" id="pm-st" min="0" placeholder="0"></div>
       <div class="fgrp"><span class="flbl">Tamaño</span><input class="finp" type="text" id="pm-sz" placeholder="30ml, 3g, Kit..."></div>
       <div class="fgrp full"><span class="flbl">Descripción</span><textarea class="finp" id="pm-desc" placeholder="Descripción del producto..."></textarea></div>
+            <div class="fgrp full">
+        <span class="flbl">Tonos / Variantes <span style="font-weight:400;color:var(--tl)">(opcional)</span></span>
+        <div style="font-size:11px;color:var(--tl);margin-bottom:8px">Si el producto tiene varios tonos, agrégalos. Cada tono tiene stock propio.</div>
+        <div id="tones-list"></div>
+        <button class="btn bs btn-sm" type="button" onclick="addToneRow()" style="margin-top:6px">
+          <i class="fa-solid fa-plus"></i> Agregar tono
+        </button>
+      </div>
       <div class="fgrp full">
         <span class="flbl">Etiquetas (tags)</span>
         <input class="finp" type="text" id="pm-tags" placeholder="Ej: nuevo, oferta, labios, glitter (separadas por comas)">
@@ -1283,7 +1298,7 @@ function openAddP() {
   document.getElementById('pm-best').checked = false;
   document.getElementById('pm-imgs-data').value = '[]';
   document.getElementById('pm-tags').value = '';
-  document.getElementById('tones-list').innerHTML = '';
+  const _tlc = document.getElementById('tones-list'); if(_tlc) _tlc.innerHTML = '';
   document.getElementById('pm-eid').value = '';
   document.getElementById('pm-imgs-preview').innerHTML = '';
   fillPMSelects();
@@ -1303,9 +1318,12 @@ function editP(id) {
   document.getElementById('pm-desc').value = p.desc    || '';
   document.getElementById('pm-tags').value = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
   // Load tones
-  document.getElementById('tones-list').innerHTML = '';
-  if (Array.isArray(p.tones) && p.tones.length) {
-    p.tones.forEach(t => addToneRow(t));
+  const _tl = document.getElementById('tones-list');
+  if (_tl) {
+    _tl.innerHTML = '';
+    if (Array.isArray(p.tones) && p.tones.length) {
+      p.tones.forEach(t => addToneRow(t));
+    }
   }
   document.getElementById('pm-feat').checked = !!p.featured;
   document.getElementById('pm-best').checked = !!p.bestseller;
@@ -3020,6 +3038,48 @@ function setToneSt(pid, toneIdx) {
 
 
 
+
+
+// === IVA LOCK ===
+const IVA_LOCK_KEY = 'baily_iva_locked';
+
+function isIvaLocked() {
+  return localStorage.getItem(IVA_LOCK_KEY) === '1';
+}
+
+function toggleIvaLock() {
+  if (isIvaLocked()) {
+    // Ask for password to unlock
+    const pw = prompt('Ingresa la contraseña del admin para desbloquear el IVA:');
+    if (pw === null) return;
+    if (pw !== getStoredPw()) { toast('Contraseña incorrecta', 'err'); return; }
+    localStorage.removeItem(IVA_LOCK_KEY);
+    updateIvaLockUI();
+    toast('IVA desbloqueado ✓', 'ok');
+  } else {
+    localStorage.setItem(IVA_LOCK_KEY, '1');
+    updateIvaLockUI();
+    toast('IVA bloqueado — se necesita contraseña para cambiar', 'ok');
+  }
+}
+
+function updateIvaLockUI() {
+  const locked = isIvaLocked();
+  const icon = document.getElementById('iva-lock-icon');
+  const btn  = document.getElementById('iva-lock-btn');
+  const inp  = document.getElementById('s-iva');
+  if (icon) icon.textContent = locked ? '🔒' : '🔓';
+  if (btn)  { btn.textContent = locked ? '🔓 Desbloquear' : '🔒 Bloquear'; }
+  if (inp)  inp.disabled = locked;
+}
+
+function saveIvaWithLock() {
+  if (isIvaLocked()) {
+    const pw = prompt('IVA bloqueado. Ingresa la contraseña para cambiar:');
+    if (!pw || pw !== getStoredPw()) { toast('Contraseña incorrecta — IVA no cambiado', 'err'); return; }
+  }
+  saveSF('iva', 's-iva', true);
+}
 
 </script>
 </body>
