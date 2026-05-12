@@ -657,11 +657,11 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
             <div>
               <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Cloud Name</div>
-              <input class="finp" type="text" id="cld-name" style="height:38px" placeholder="ej: dsu0vdcvx">
+              <input class="finp" type="text" id="cld-name" style="height:38px" placeholder="ej: dsu0vdcvx" value="dsu0vdcvx">
             </div>
             <div>
               <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Upload Preset (unsigned)</div>
-              <input class="finp" type="text" id="cld-preset" style="height:38px" placeholder="ej: baily_upload">
+              <input class="finp" type="text" id="cld-preset" style="height:38px" placeholder="ej: baily_upload" value="baily_upload">
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1790,6 +1790,13 @@ function changePw() {
 // AUTH CHECK ON LOAD
 checkAuth();
 updateOrderBadge();
+// Pre-save Cloudinary credentials
+(function(){
+  const existing = localStorage.getItem('baily_cld');
+  if(!existing || existing === 'null') {
+    localStorage.setItem('baily_cld', JSON.stringify({cloud:'dsu0vdcvx',preset:'baily_upload'}));
+  }
+})();
 
 // ════════════════════════════════════════════════
 // PEDIDOS / ORDERS SYSTEM
