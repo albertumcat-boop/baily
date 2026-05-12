@@ -711,14 +711,6 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         <div class="sc">
           <h3><i class="fa-solid fa-dollar-sign" style="color:var(--mauve);margin-right:6px"></i>Precios & Tasa</h3>
           <div class="srow"><span class="slbl">Tasa BCV (Bs por $)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-tasa" style="width:85px;height:34px" step="0.01"><button class="btn bp btn-sm" onclick="saveSF('tasaBCV','s-tasa',true)">Guardar</button></div></div>
-          <div class="srow">
-            <span class="slbl">IVA (%) <span id="iva-lock-icon" style="color:var(--mauve);cursor:pointer;margin-left:4px" onclick="toggleIvaLock()" title="Bloquear/desbloquear IVA">🔓</span></span>
-            <div style="display:flex;gap:6px;align-items:center">
-              <input class="finp" type="number" id="s-iva" style="width:65px;height:34px" step="0.1">
-              <button class="btn bp btn-sm" onclick="saveIvaWithLock()">Guardar</button>
-              <button class="btn bs btn-sm" id="iva-lock-btn" onclick="toggleIvaLock()" title="Bloquear para que no cambie">🔒 Bloquear</button>
-            </div>
-          </div>
           <div class="srow"><span class="slbl">Descuento activo (%)</span><div style="display:flex;gap:8px;align-items:center"><label class="tg"><input type="checkbox" id="s-don"><span class="tg-sl"></span></label><input class="finp" type="number" id="s-dpct" style="width:60px;height:34px"><button class="btn bp btn-sm" onclick="saveDisc()">Guardar</button></div></div>
         </div>
         <div class="sc">
@@ -1007,7 +999,7 @@ const CAT_DEFAULT = {
 };
 
 const CFG_DEFAULT = {
-  tasaBCV: 47.15, iva: 16, descPct: 35, descActive: false,
+  tasaBCV: 47.15,  descPct: 35, descActive: false,
   deliveryCost: 3, freeThreshold: 30, wa: '+584242655274'
 };
 
@@ -1569,7 +1561,6 @@ function renderSettings() {
   try { saved = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
   // Show saved value if exists, otherwise show current CFG value, otherwise default
   document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV ?? 47.15;
-  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva ?? 0;
   document.getElementById('s-don').checked = saved.descActive !== undefined ? !!saved.descActive : !!CFG.descActive;
   document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct ?? 35;
   document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 3;
@@ -1856,8 +1847,7 @@ function renderOrderCard(o, isPending) {
   const totalsHtml = `
     <div style="display:flex;flex-direction:column;gap:2px">
       ${o.desc > 0 ? `<div style="font-size:12px;color:var(--err)">Descuento: -$${o.desc.toFixed(2)}</div>` : ''}
-      <div style="font-size:12px;color:var(--ts)">IVA: $${o.iva.toFixed(2)}</div>
-    </div>
+      <div style="font-size:12px;color:var(--ts)">    </div>
     <div>
       <div class="ord-total-val">$${o.total.toFixed(2)}</div>
       <div class="ord-total-bs">Bs. ${o.totalBs.toFixed(2)}</div>
@@ -3040,9 +3030,6 @@ function setToneSt(pid, toneIdx) {
 
 
 
-// === IVA LOCK ===
-const IVA_LOCK_KEY = 'baily_iva_locked';
-
 function isIvaLocked() {
   return localStorage.getItem(IVA_LOCK_KEY) === '1';
 }
@@ -3054,12 +3041,10 @@ function toggleIvaLock() {
     if (pw === null) return;
     if (pw !== getStoredPw()) { toast('Contraseña incorrecta', 'err'); return; }
     localStorage.removeItem(IVA_LOCK_KEY);
-    updateIvaLockUI();
-    toast('IVA desbloqueado ✓', 'ok');
+      toast('IVA desbloqueado ✓', 'ok');
   } else {
     localStorage.setItem(IVA_LOCK_KEY, '1');
-    updateIvaLockUI();
-    toast('IVA bloqueado — se necesita contraseña para cambiar', 'ok');
+      toast('IVA bloqueado — se necesita contraseña para cambiar', 'ok');
   }
 }
 
