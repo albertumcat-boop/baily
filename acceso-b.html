@@ -1001,6 +1001,12 @@ const IK = 'baily_inventory_v1';
 const CK = 'baily_cfg_v1';
 const CATK = 'baily_cats_v1';
 const BRK = 'baily_brands_v1';
+const CLD_KEY    = 'baily_cld';
+const FB_CFG_KEY = 'baily_fb_config';
+const ORD_KEY    = 'baily_orders';
+const CLK        = 'baily_customers_v1';
+const PROMO_KEY  = 'baily_promos_v1';
+const BLOG_KEY   = 'baily_blog_v1';
 
 const CAT_DEFAULT = {
   cabello:     { name: 'Cabello',      icon: '💆' },
@@ -1790,18 +1796,14 @@ function changePw() {
 // AUTH CHECK ON LOAD
 checkAuth();
 updateOrderBadge();
-// Pre-save Cloudinary credentials
-(function(){
-  const existing = localStorage.getItem('baily_cld');
-  if(!existing || existing === 'null') {
-    localStorage.setItem('baily_cld', JSON.stringify({cloud:'dsu0vdcvx',preset:'baily_upload'}));
-  }
-})();
+// Pre-configure Cloudinary
+if (!localStorage.getItem(CLD_KEY)) {
+  localStorage.setItem(CLD_KEY, JSON.stringify({cloud:'dsu0vdcvx',preset:'baily_upload'}));
+}
 
 // ════════════════════════════════════════════════
 // PEDIDOS / ORDERS SYSTEM
 // ════════════════════════════════════════════════
-const ORD_KEY = 'baily_orders';
 
 function getOrders() {
   try { return JSON.parse(localStorage.getItem(ORD_KEY) || '[]'); }
@@ -1975,7 +1977,6 @@ setInterval(updateOrderBadge, 30000);
 // ════════════════════════════════════════════════
 // CUSTOMERS DATABASE
 // ════════════════════════════════════════════════
-const CLK = 'baily_customers_v1';
 
 function getCustomers() {
   try { return JSON.parse(localStorage.getItem(CLK) || '[]'); } catch(e) { return []; }
@@ -2251,8 +2252,6 @@ function exportFinanzas() {
 // ════════════════════════════════════════════════
 // PROMOS & BLOG MANAGEMENT
 // ════════════════════════════════════════════════
-const PROMO_KEY = 'baily_promos_v1';
-const BLOG_KEY  = 'baily_blog_v1';
 
 function getDefaultPromos() { try { return JSON.parse(document.getElementById('default-promos').textContent); } catch(e) { return []; } }
 function getDefaultBlog()   { try { return JSON.parse(document.getElementById('default-blog').textContent); }   catch(e) { return []; } }
@@ -2609,7 +2608,7 @@ function removeImg(i) {
 // ════════════════════════════════════════════════
 // FIREBASE / CLOUD SYNC
 // ════════════════════════════════════════════════
-const FB_CFG_KEY = 'baily_fb_config';
+
 var db = null, fbReady = false;
 
 function loadFBConfig() {
@@ -3017,7 +3016,6 @@ var storage = null;
 // CLOUDINARY — IMAGE HOSTING (GRATUITO)
 // 25GB free · no credit card · works on any device
 // ═══════════════════════════════════════════
-var CLD_KEY = 'baily_cld';
 
 function getCLD() {
   try { return JSON.parse(localStorage.getItem(CLD_KEY) || 'null'); } catch(e) { return null; }
@@ -3079,23 +3077,13 @@ async function deleteFromStorage(url) {
 }
 
 function initStorage() {
+  // Auto-configure Cloudinary with embedded credentials
   try {
-    var _cldKey = 'baily_cld';
-    var existing = null;
-    try { existing = JSON.parse(localStorage.getItem(_cldKey) || 'null'); } catch(e2) {}
+    var existing = getCLD();
     if (!existing || !existing.cloud) {
-      localStorage.setItem(_cldKey, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
-      console.log('[BAILY] Cloudinary configured: dsu0vdcvx');
+      localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
     }
-    // Fill inputs if visible
-    var n = document.getElementById('cld-name');
-    var p = document.getElementById('cld-preset');
-    var cfg = JSON.parse(localStorage.getItem(_cldKey) || 'null');
-    if (n && cfg && !n.value) n.value = cfg.cloud || '';
-    if (p && cfg && !p.value) p.value = cfg.preset || '';
-  } catch(e) {
-    console.log('[BAILY] initStorage error:', e.message);
-  }
+  } catch(e) {}
 }
 
 function setToneSt(pid, toneIdx) {
