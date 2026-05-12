@@ -3221,35 +3221,3 @@ function updateCLDStatus() {
 </script>
 </body>
 </html
-        <!-- CLOUDINARY CONFIG — always visible -->
-        <div style="background:var(--cream2);border-radius:var(--rm);padding:18px;margin-bottom:18px;border:1.5px solid var(--mp);box-shadow:var(--sh)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div>
-              <div style="font-weight:600;font-size:15px;color:var(--md)">🖼️ Cloudinary — Fotos en la nube</div>
-              <div id="cld-status-line-old" style="font-size:12px;margin-top:2px;color:var(--tl)">Sin configurar</div>
-            </div>
-            <div id="cld-dot-old" style="width:12px;height:12px;border-radius:50%;background:var(--tl);flex-shrink:0"></div>
-          </div>
-          <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7">
-            Almacena las fotos en la nube · Gratis 25GB · Sin tarjeta de crédito<br>
-            <a href="https://cloudinary.com/users/register_free" target="_blank" style="color:var(--mauve);font-weight:500">→ Crear cuenta gratis en cloudinary.com</a>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Cloud Name</div>
-              <input class="finp" type="text" id="cld-name-old" style="height:38px" placeholder="ej: dsu0vdcvx">
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Upload Preset (unsigned)</div>
-              <input class="finp" type="text" id="cld-preset-old" style="height:38px" placeholder="ej: baily_upload">
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn bp" onclick="saveCLD()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-            <button class="btn bs" onclick="testCLD()"><i class="fa-solid fa-plug"></i> Probar</button>
-            <button class="btn bd btn-sm" onclick="clearCLD()"><i class="fa-solid fa-trash"></i> Borrar</button>
-          </div>
-          <div id="cld-test-result-old" style="font-size:13px;margin-top:10px"></div>
-        </div>
-
->
