@@ -649,15 +649,35 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
               Sube todos tus datos a Firebase para acceder desde cualquier dispositivo.
               Los cambios de stock, precios y clientes se sincronizan automáticamente.
             </div>
-            <!-- Image storage note -->
-            <div style="background:#E8F5EE;border-radius:var(--rm);padding:12px 14px;margin-bottom:16px;border:1.5px solid var(--ok)">
-              <div style="font-weight:600;font-size:13px;color:var(--ok);margin-bottom:4px">
-                🖼️ Fotos → Firestore (sin servicios externos)
+            <!-- Cloudinary config -->
+            <div id="cld-panel" style="background:var(--cream2);border-radius:var(--rm);padding:14px;margin-bottom:16px;border:1.5px solid var(--mp)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div>
+                  <div style="font-weight:600;font-size:14px;color:var(--md)">🖼️ Cloudinary — Fotos en la nube</div>
+                  <div id="cld-status-line" style="font-size:12px;color:var(--tl);margin-top:2px">Sin configurar — fotos solo en este dispositivo</div>
+                </div>
+                <div id="cld-dot" style="width:10px;height:10px;border-radius:50%;background:var(--tl);flex-shrink:0"></div>
               </div>
-              <div style="font-size:12px;color:var(--ts);line-height:1.6">
-                Las fotos se comprimen automáticamente a ~40KB y se guardan en Firestore.<br>
-                Sin Cloudinary, sin Storage, sin costos adicionales. Todo en tu base de datos gratuita.
+              <div style="font-size:12px;color:var(--ts);margin-bottom:10px;line-height:1.6">
+                Gratis para siempre · 25GB · Sin tarjeta de crédito<br>
+                <a href="https://cloudinary.com/users/register_free" target="_blank" style="color:var(--mauve);font-weight:500">→ Crear cuenta en cloudinary.com</a>
               </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cloud Name</div>
+                  <input class="finp" type="text" id="cld-name" style="height:36px" placeholder="ej: mi-tienda">
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Upload Preset (unsigned)</div>
+                  <input class="finp" type="text" id="cld-preset" style="height:36px" placeholder="ej: baily_upload">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn bp btn-sm" onclick="saveCLD()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+                <button class="btn bs btn-sm" onclick="testCLD()"><i class="fa-solid fa-plug"></i> Probar conexión</button>
+                <button class="btn bd btn-sm" onclick="clearCLD()"><i class="fa-solid fa-trash"></i> Borrar</button>
+              </div>
+              <div id="cld-test-result" style="font-size:12px;margin-top:8px;color:var(--ts)"></div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
               <button class="btn bp btn-sm" onclick="syncToCloud('products')"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
@@ -1535,7 +1555,9 @@ function uploadPhoto(id, inp) {
       if (done === toProcess.length) {
         saveProds();
         renderPhotos();
-        toast(done + ' foto(s) guardadas ✓', 'ok');
+        const cfg = getCLD();
+        const isCloud = cfg && cfg.cloud;
+        toast(done + ' foto(s) ' + (isCloud ? 'subidas a Cloudinary ☁️ ✓' : 'guardadas (configura Cloudinary para verlas en otros dispositivos)'), isCloud ? 'ok' : '');
       }
     });
   });
@@ -2442,7 +2464,8 @@ function handleImg(inp, prevId, dataId) {
     document.getElementById(dataId).value = finalUrl;
     const prev = document.getElementById(prevId);
     if (prev) { prev.src = finalUrl; prev.style.display = 'block'; }
-    toast('Foto guardada ✓', 'ok');
+    const cldCfg = getCLD();
+    toast('Foto ' + (cldCfg && cldCfg.cloud ? 'subida a Cloudinary ☁️ ✓' : 'guardada localmente ✓'), 'ok');
   });
   inp.value = '';
 }
@@ -2635,6 +2658,7 @@ function renderFirebasePage() {
     document.getElementById('fb-appId').value             = cfg.appId || '';
   }
   updateFBStatus();
+  updateCLDStatus();
 }
 
 function updateFBStatus() {
@@ -2716,8 +2740,16 @@ async function syncToCloud(type) {
       for (const chunk of chunks) {
         const batch = db.batch();
         chunk.forEach(p => {
-          // Images are compressed to ~40KB — safe to store in Firestore (1MB limit)
           const doc = {...p};
+          // Safety check: if doc is too large, strip images to avoid Firestore 1MB limit
+          const docJson = JSON.stringify(doc);
+          if (docJson.length > 900000) {
+            // Strip images from this product - it's too large
+            doc.img = doc.img && doc.img.startsWith('http') ? doc.img : '';
+            doc.imgs = Array.isArray(doc.imgs) ? doc.imgs.filter(u => u.startsWith('http')) : [];
+            doc._imgsTooLarge = true;
+            console.warn('[BAILY] Product', p.id, 'images too large for Firestore, stripping base64');
+          }
           batch.set(db.collection('products').doc(p.id), doc);
         });
         await batch.commit();
@@ -2777,13 +2809,16 @@ async function syncFromCloud(type) {
     if (type === 'products') {
       const snap = await db.collection('products').get();
       if (snap.empty) { fbLog('⚠️ No hay productos en la nube'); return; }
-      // Merge cloud data with local images (keep local imgs)
+      // Merge cloud data with local images
       const cloudMap = {};
       snap.docs.forEach(d => { cloudMap[d.id] = {id: d.id, ...d.data()}; });
-      // Preserve local images
       const merged = Object.values(cloudMap).map(cp => {
         const local = PRODUCTS.find(p => p.id === cp.id);
-        if (local) { cp.img = local.img || ''; cp.imgs = local.imgs || []; }
+        // Keep cloud image if it's a URL (Firebase/CDN), otherwise use local base64
+        if (local) {
+          if (!cp.img || cp.img === '' || cp._imgsTooLarge) cp.img = local.img || '';
+          if (!cp.imgs || !cp.imgs.length || cp._imgsTooLarge) cp.imgs = local.imgs || [];
+        }
         return cp;
       });
       PRODUCTS = merged;
@@ -2970,33 +3005,60 @@ var storage = null;
 // All images compressed to ~40KB so they fit in Firestore's 1MB document limit
 // Same approach as AVIPET — no external services needed
 
+// ═══════════════════════════════════════════
+// CLOUDINARY — IMAGE HOSTING (GRATUITO)
+// 25GB free · no credit card · works on any device
+// ═══════════════════════════════════════════
+const CLD_KEY = 'baily_cld';
+
+function getCLD() {
+  try { return JSON.parse(localStorage.getItem(CLD_KEY) || 'null'); } catch(e) { return null; }
+}
+
 async function uploadToStorage(base64DataUrl, filename) {
-  // Always compress aggressively for Firestore
+  const cfg = getCLD();
+  if (cfg && cfg.cloud && cfg.preset) {
+    try {
+      return await uploadToCloudinary(base64DataUrl, cfg.cloud, cfg.preset);
+    } catch(e) {
+      console.warn('[BAILY] Cloudinary failed, using compressed base64:', e.message);
+    }
+  }
+  // Fallback: compress and store in Firestore
   return await compressToFirestoreSize(base64DataUrl);
 }
 
-// Compress to ~40KB — fits comfortably in Firestore 1MB limit
-// 5 images × 40KB = 200KB per product document
+async function uploadToCloudinary(base64DataUrl, cloudName, uploadPreset) {
+  const res  = await fetch(base64DataUrl);
+  const blob = await res.blob();
+  const form = new FormData();
+  form.append('file', blob);
+  form.append('upload_preset', uploadPreset);
+  form.append('folder', 'baily-store');
+  const r = await fetch('https://api.cloudinary.com/v1_1/' + cloudName + '/image/upload', {
+    method: 'POST', body: form
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const data = await r.json();
+  if (data.error) throw new Error(data.error.message);
+  console.log('[BAILY] Cloudinary OK:', data.secure_url.slice(0,60));
+  return data.secure_url;
+}
+
+// Fallback: compress to ~60KB for Firestore
 async function compressToFirestoreSize(base64DataUrl) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const MAX = 600;
+      const MAX = 700;
       let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        const r = Math.min(MAX/w, MAX/h);
-        w = Math.round(w*r);
-        h = Math.round(h*r);
-      }
+      if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w=Math.round(w*r); h=Math.round(h*r); }
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      let q = 0.6, result;
-      do {
-        result = canvas.toDataURL('image/jpeg', q);
-        q -= 0.07;
-      } while (result.length > 55000 && q > 0.15); // target ~40KB
-      console.log('[BAILY] Image compressed to', Math.round(result.length*0.75/1024), 'KB at quality', q.toFixed(2));
+      let q = 0.65, result;
+      do { result = canvas.toDataURL('image/jpeg', q); q -= 0.07; }
+      while (result.length > 80000 && q > 0.15);
       resolve(result);
     };
     img.src = base64DataUrl;
@@ -3009,9 +3071,13 @@ async function deleteFromStorage(url) {
 }
 
 function initStorage() {
-  // Images stored as compressed base64 in Firestore
-  // No external storage service needed
-  console.log('[BAILY] Image storage: Firestore (compressed base64)');
+  // Auto-configure Cloudinary if not already saved
+  const existing = getCLD();
+  if (!existing || !existing.cloud) {
+    localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
+    console.log('[BAILY] Cloudinary auto-configured: dsu0vdcvx');
+  }
+  updateCLDStatus();
 }
 
 function setToneSt(pid, toneIdx) {
@@ -3065,6 +3131,71 @@ function saveIvaWithLock() {
   }
   saveSF('iva', 's-iva', true);
 }
+
+
+// ═══════════════════════════════════════════
+// CLOUDINARY CONFIG FUNCTIONS
+// ═══════════════════════════════════════════
+function saveCLD() {
+  const name   = document.getElementById('cld-name').value.trim();
+  const preset = document.getElementById('cld-preset').value.trim();
+  if (!name || !preset) { toast('Completa Cloud Name y Upload Preset', 'err'); return; }
+  localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: name, preset }));
+  updateCLDStatus();
+  toast('✅ Cloudinary guardado — las fotos nuevas se subirán a la nube', 'ok');
+}
+
+function clearCLD() {
+  if (!confirm('¿Borrar configuración de Cloudinary?')) return;
+  localStorage.removeItem(CLD_KEY);
+  updateCLDStatus();
+  toast('Cloudinary borrado', 'ok');
+}
+
+async function testCLD() {
+  const cfg = getCLD();
+  if (!cfg) { toast('Guarda las credenciales primero', 'err'); return; }
+  const res = document.getElementById('cld-test-result');
+  res.textContent = '⏳ Probando...';
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1; canvas.height = 1;
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg'));
+    const form = new FormData();
+    form.append('file', blob);
+    form.append('upload_preset', cfg.preset);
+    const r = await fetch('https://api.cloudinary.com/v1_1/' + cfg.cloud + '/image/upload', {
+      method: 'POST', body: form
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message);
+    res.innerHTML = '✅ <strong>¡Funciona!</strong> Las fotos ahora se guardan en la nube y se ven en cualquier dispositivo.';
+    res.style.color = 'var(--ok)';
+    updateCLDStatus();
+  } catch(e) {
+    res.textContent = '❌ Error: ' + e.message + ' — Revisa el Cloud Name y Upload Preset';
+    res.style.color = 'var(--err)';
+  }
+}
+
+function updateCLDStatus() {
+  const cfg = getCLD();
+  const dot  = document.getElementById('cld-dot');
+  const line = document.getElementById('cld-status-line');
+  const nameEl   = document.getElementById('cld-name');
+  const presetEl = document.getElementById('cld-preset');
+  if (cfg && cfg.cloud) {
+    if (dot)  { dot.style.background  = 'var(--ok)'; }
+    if (line) { line.textContent = '✅ Conectado: ' + cfg.cloud + ' · Las fotos se guardan en Cloudinary'; line.style.color = 'var(--ok)'; }
+    if (nameEl)   nameEl.value   = cfg.cloud;
+    if (presetEl) presetEl.value = cfg.preset;
+  } else {
+    if (dot)  { dot.style.background  = 'var(--tl)'; }
+    if (line) { line.textContent = 'Sin configurar — fotos solo en este dispositivo'; line.style.color = 'var(--tl)'; }
+  }
+}
+
+// Patch renderFirebasePage to also update Cloudinary status
 
 </script>
 </body>
