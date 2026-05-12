@@ -3151,18 +3151,17 @@ function saveIvaWithLock() {
 // CLOUDINARY CONFIG FUNCTIONS
 // ═══════════════════════════════════════════
 function saveCLD() {
+  // Use hardcoded values if inputs are empty
   const nameEl   = document.getElementById('cld-name');
   const presetEl = document.getElementById('cld-preset');
-  const name   = nameEl   ? nameEl.value.trim()   : '';
-  const preset = presetEl ? presetEl.value.trim() : '';
-  console.log('[BAILY] saveCLD called. name=', name, 'preset=', preset);
-  if (!name || !preset) {
-    toast('⚠️ Completa ambos campos: Cloud Name = ' + (name||'vacío') + ', Preset = ' + (preset||'vacío'), 'err');
-    return;
-  }
-  localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: name, preset }));
+  var name   = nameEl   ? nameEl.value.trim()   : 'dsu0vdcvx';
+  var preset = presetEl ? presetEl.value.trim() : 'baily_upload';
+  // Fallback to hardcoded if still empty
+  if (!name)   name   = 'dsu0vdcvx';
+  if (!preset) preset = 'baily_upload';
+  localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: name, preset: preset }));
   updateCLDStatus();
-  toast('✅ Cloudinary guardado: ' + name + ' / ' + preset, 'ok');
+  toast('✅ Cloudinary guardado: ' + name, 'ok');
 }
 
 function clearCLD() {
@@ -3173,18 +3172,27 @@ function clearCLD() {
 }
 
 async function testCLD() {
-  const cfg = getCLD();
-  if (!cfg) { toast('Guarda las credenciales primero', 'err'); return; }
+  // Auto-save first if inputs have values
+  const nameInp   = document.getElementById('cld-name');
+  const presetInp = document.getElementById('cld-preset');
+  if (nameInp && nameInp.value.trim() && presetInp && presetInp.value.trim()) {
+    localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: nameInp.value.trim(), preset: presetInp.value.trim() }));
+  }
+  // Read from inputs directly (most reliable)
+  const cloud  = nameInp  ? nameInp.value.trim()  : '';
+  const preset = presetInp ? presetInp.value.trim() : '';
+  if (!cloud || !preset) { toast('Los campos Cloud Name y Upload Preset están vacíos', 'err'); return; }
   const res = document.getElementById('cld-test-result');
-  res.textContent = '⏳ Probando...';
+  if (res) res.textContent = '⏳ Probando conexión con Cloudinary...';
+  toast('⏳ Probando Cloudinary...', '');
   try {
     const canvas = document.createElement('canvas');
     canvas.width = 1; canvas.height = 1;
     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg'));
     const form = new FormData();
     form.append('file', blob);
-    form.append('upload_preset', cfg.preset);
-    const r = await fetch('https://api.cloudinary.com/v1_1/' + cfg.cloud + '/image/upload', {
+    form.append('upload_preset', preset);
+    const r = await fetch('https://api.cloudinary.com/v1_1/' + cloud + '/image/upload', {
       method: 'POST', body: form
     });
     const data = await r.json();
