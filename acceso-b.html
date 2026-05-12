@@ -1569,7 +1569,7 @@ function renderSettings() {
   try { saved = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
   // Show saved value if exists, otherwise show current CFG value, otherwise default
   document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV ?? 47.15;
-  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva ?? 16;
+  document.getElementById('s-iva').value   = saved.iva      ?? CFG.iva ?? 0;
   document.getElementById('s-don').checked = saved.descActive !== undefined ? !!saved.descActive : !!CFG.descActive;
   document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct ?? 35;
   document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 3;
