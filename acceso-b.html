@@ -3072,13 +3072,19 @@ async function deleteFromStorage(url) {
 }
 
 function initStorage() {
-  // Auto-configure Cloudinary if not already saved
+  // Auto-configure Cloudinary with embedded credentials
   const existing = getCLD();
   if (!existing || !existing.cloud) {
     localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: 'dsu0vdcvx', preset: 'baily_upload' }));
-    console.log('[BAILY] Cloudinary auto-configured: dsu0vdcvx');
+    console.log('[BAILY] Cloudinary auto-configured: dsu0vdcvx / baily_upload');
   }
   updateCLDStatus();
+  // Also fill inputs immediately if they exist
+  const n = document.getElementById('cld-name');
+  const p = document.getElementById('cld-preset');
+  const cfg = getCLD();
+  if (n && cfg) n.value = cfg.cloud || '';
+  if (p && cfg) p.value = cfg.preset || '';
 }
 
 function setToneSt(pid, toneIdx) {
@@ -3138,12 +3144,18 @@ function saveIvaWithLock() {
 // CLOUDINARY CONFIG FUNCTIONS
 // ═══════════════════════════════════════════
 function saveCLD() {
-  const name   = document.getElementById('cld-name').value.trim();
-  const preset = document.getElementById('cld-preset').value.trim();
-  if (!name || !preset) { toast('Completa Cloud Name y Upload Preset', 'err'); return; }
+  const nameEl   = document.getElementById('cld-name');
+  const presetEl = document.getElementById('cld-preset');
+  const name   = nameEl   ? nameEl.value.trim()   : '';
+  const preset = presetEl ? presetEl.value.trim() : '';
+  console.log('[BAILY] saveCLD called. name=', name, 'preset=', preset);
+  if (!name || !preset) {
+    toast('⚠️ Completa ambos campos: Cloud Name = ' + (name||'vacío') + ', Preset = ' + (preset||'vacío'), 'err');
+    return;
+  }
   localStorage.setItem(CLD_KEY, JSON.stringify({ cloud: name, preset }));
   updateCLDStatus();
-  toast('✅ Cloudinary guardado — las fotos nuevas se subirán a la nube', 'ok');
+  toast('✅ Cloudinary guardado: ' + name + ' / ' + preset, 'ok');
 }
 
 function clearCLD() {
