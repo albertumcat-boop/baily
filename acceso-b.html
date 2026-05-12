@@ -841,7 +841,19 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     <div class="fg">
       <div class="fgrp full"><span class="flbl">Nombre *</span><input class="finp" type="text" id="cm-nm" placeholder="Ej: Iluminadores"></div>
       <div class="fgrp"><span class="flbl">ID (sin espacios ni tildes)</span><input class="finp" type="text" id="cm-id" placeholder="iluminadores"></div>
-      <div class="fgrp"><span class="flbl">Emoji / Ícono</span><input class="finp" type="text" id="cm-ico" placeholder="🌟" maxlength="4"></div>
+      <div class="fgrp"><span class="flbl">Emoji / Ícono (si no hay foto)</span><input class="finp" type="text" id="cm-ico" placeholder="🌟" maxlength="4"></div>
+      <div class="fgrp full">
+        <span class="flbl">Foto de la categoría (opcional)</span>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+          <label class="btn bs btn-sm" style="cursor:pointer">
+            <i class="fa-solid fa-image"></i> Subir foto
+            <input type="file" accept="image/*" style="display:none" onchange="handleCatImg(this)">
+          </label>
+          <button class="btn bd btn-sm" type="button" onclick="clearCatImg()">Quitar foto</button>
+        </div>
+        <img id="cm-img-prev" style="display:none;width:100%;max-height:120px;object-fit:cover;border-radius:var(--r);margin-top:8px;border:var(--border)">
+        <input type="hidden" id="cm-img">
+      </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="btn bs" onclick="closeCM()">Cancelar</button>
@@ -860,6 +872,18 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     <div class="fg">
       <div class="fgrp full"><span class="flbl">Nombre *</span><input class="finp" type="text" id="bm-nm" placeholder="Ej: Charlotte Tilbury"></div>
       <div class="fgrp full"><span class="flbl">Descripción corta</span><input class="finp" type="text" id="bm-sub" placeholder="Ej: Maquillaje profesional"></div>
+      <div class="fgrp full">
+        <span class="flbl">Logo / Foto de la marca (opcional)</span>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+          <label class="btn bs btn-sm" style="cursor:pointer">
+            <i class="fa-solid fa-image"></i> Subir foto
+            <input type="file" accept="image/*" style="display:none" onchange="handleBrandImg(this)">
+          </label>
+          <button class="btn bd btn-sm" type="button" onclick="clearBrandImg()">Quitar foto</button>
+        </div>
+        <img id="bm-img-prev" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:var(--r);margin-top:8px;border:var(--border)">
+        <input type="hidden" id="bm-img">
+      </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="btn bs" onclick="closeBM()">Cancelar</button>
@@ -1426,7 +1450,7 @@ function renderCatsPage() {
     const cnt = PRODUCTS.filter(p => p.catId === id).length;
     return `<div class="ccard">
       <button class="cdel" onclick="delCat('${id}')" title="Eliminar"><i class="fa-solid fa-xmark"></i></button>
-      <div class="cico">${c.icon || '📦'}</div>
+      <div class="cico" style="overflow:hidden;border-radius:var(--r)">${c.img ? `<img src="${c.img}" style="width:100%;height:100%;object-fit:cover">` : (c.icon || '📦')}</div>
       <div class="cnm">${c.name}</div>
       <div class="ccnt">${cnt} producto${cnt !== 1 ? 's' : ''}</div>
     </div>`;
@@ -1450,7 +1474,8 @@ function saveCat() {
   }
   if (CATS[id]) { toast('Esta categoría ya existe con ese ID', 'err'); return; }
   const ico = document.getElementById('cm-ico').value.trim() || '💜';
-  CATS[id] = { name: nm, icon: ico };
+  const cimg = document.getElementById('cm-img').value || '';
+  CATS[id] = { name: nm, icon: ico, img: cimg };
   saveCats();
   closeCM();
   renderCatsPage();
@@ -1472,10 +1497,18 @@ function renderBrandsPage() {
     const all   = PRODUCTS.filter(p => p.brand === b);
     const avail = all.filter(p => (+p.stock||0) > 0).length;
     return `<tr>
-      <td style="font-weight:600;font-family:Georgia,serif;font-size:15px">${b}</td>
+      <td style="font-weight:600;font-family:Georgia,serif;font-size:15px">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${(()=>{const m=JSON.parse(localStorage.getItem('baily_brand_meta')||'{}');return m[b]&&m[b].img?`<img src="${m[b].img}" style="width:36px;height:36px;object-fit:contain;border-radius:var(--r);border:var(--border)">`:''})()}
+          ${b}
+        </div>
+      </td>
       <td>${all.length}</td>
       <td><span class="sn sok">${avail}</span></td>
-      <td><button class="mb del" onclick="delBrand('${b}')"><i class="fa-solid fa-trash"></i></button></td>
+      <td style="display:flex;gap:5px">
+        <button class="mb edit" onclick="editBrand('${b}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="mb del" onclick="delBrand('${b}')"><i class="fa-solid fa-trash"></i></button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -1486,14 +1519,21 @@ function openAddBrand() {
   document.getElementById('bm-bg').classList.add('on');
 }
 function saveBrand() {
-  const nm = document.getElementById('bm-nm').value.trim();
+  const nm  = document.getElementById('bm-nm').value.trim();
+  const sub = document.getElementById('bm-sub').value.trim();
+  const img = document.getElementById('bm-img').value || '';
   if (!nm) { toast('⚠️ Ingresa el nombre de la marca', 'err'); return; }
-  if (BRANDS.includes(nm)) { toast('Esta marca ya existe', 'err'); return; }
-  BRANDS.push(nm); BRANDS.sort();
+  const isEdit = document.getElementById('bm-eid') ? document.getElementById('bm-eid').value : '';
+  if (!isEdit && BRANDS.includes(nm)) { toast('Esta marca ya existe', 'err'); return; }
+  if (!BRANDS.includes(nm)) { BRANDS.push(nm); BRANDS.sort(); }
+  // Save brand metadata
+  const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
+  meta[nm] = { sub, img };
+  localStorage.setItem('baily_brand_meta', JSON.stringify(meta));
   saveBrands();
   closeBM();
   renderBrandsPage();
-  toast(`Marca "${nm}" agregada ✓`, 'ok');
+  toast(`Marca "${nm}" guardada ✓`, 'ok');
 }
 function delBrand(b) {
   const cnt = PRODUCTS.filter(p => p.brand === b).length;
@@ -3217,6 +3257,62 @@ function updateCLDStatus() {
 }
 
 // Patch renderFirebasePage to also update Cloudinary status
+
+
+// ── CATEGORY IMAGE HELPERS ──
+function handleCatImg(inp) {
+  const file = inp.files[0]; if (!file) return;
+  compressImage(file, async (dataUrl, kb) => {
+    const url = await uploadToStorage(dataUrl, 'cat_' + Date.now());
+    document.getElementById('cm-img').value = url;
+    const prev = document.getElementById('cm-img-prev');
+    prev.src = url; prev.style.display = 'block';
+    toast('Foto de categoría guardada ✓', 'ok');
+  });
+  inp.value = '';
+}
+function clearCatImg() {
+  document.getElementById('cm-img').value = '';
+  const p = document.getElementById('cm-img-prev');
+  p.src=''; p.style.display='none';
+}
+
+// ── BRAND IMAGE HELPERS ──
+function handleBrandImg(inp) {
+  const file = inp.files[0]; if (!file) return;
+  compressImage(file, async (dataUrl, kb) => {
+    const url = await uploadToStorage(dataUrl, 'brand_' + Date.now());
+    document.getElementById('bm-img').value = url;
+    const prev = document.getElementById('bm-img-prev');
+    prev.src = url; prev.style.display = 'block';
+    toast('Logo de marca guardado ✓', 'ok');
+  });
+  inp.value = '';
+}
+function clearBrandImg() {
+  document.getElementById('bm-img').value = '';
+  const p = document.getElementById('bm-img-prev');
+  p.src=''; p.style.display='none';
+}
+
+function editBrand(name) {
+  const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
+  const m = meta[name] || {};
+  document.getElementById('bm-nm').value  = name;
+  document.getElementById('bm-sub').value = m.sub || '';
+  document.getElementById('bm-img').value = m.img || '';
+  const prev = document.getElementById('bm-img-prev');
+  if (m.img) { prev.src = m.img; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+  // Add hidden eid field if not exists
+  if (!document.getElementById('bm-eid')) {
+    const eid = document.createElement('input');
+    eid.type = 'hidden'; eid.id = 'bm-eid';
+    document.getElementById('bm-nm').parentElement.appendChild(eid);
+  }
+  document.getElementById('bm-eid').value = name;
+  document.getElementById('bm-ttl-txt').textContent = 'Editar Marca';
+  document.getElementById('bm-bg').classList.add('on');
+}
 
 </script>
 </body>
