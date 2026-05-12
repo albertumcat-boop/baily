@@ -641,6 +641,37 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           </div>
         </div>
 
+        <!-- CLOUDINARY CONFIG -->
+        <div style="background:var(--cream2);border-radius:var(--rm);padding:18px;margin-bottom:18px;border:1.5px solid var(--mp);box-shadow:var(--sh)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-weight:600;font-size:15px;color:var(--md)">🖼️ Cloudinary — Fotos en la nube</div>
+              <div id="cld-status-line" style="font-size:12px;margin-top:2px;color:var(--tl)">Sin configurar</div>
+            </div>
+            <div id="cld-dot" style="width:12px;height:12px;border-radius:50%;background:var(--tl);flex-shrink:0"></div>
+          </div>
+          <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7">
+            Almacena las fotos en la nube · Gratis 25GB · Sin tarjeta de crédito<br>
+            <a href="https://cloudinary.com/users/register_free" target="_blank" style="color:var(--mauve);font-weight:500">→ Crear cuenta gratis en cloudinary.com</a>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Cloud Name</div>
+              <input class="finp" type="text" id="cld-name" style="height:38px" placeholder="ej: dsu0vdcvx">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Upload Preset (unsigned)</div>
+              <input class="finp" type="text" id="cld-preset" style="height:38px" placeholder="ej: baily_upload">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn bp" onclick="saveCLD()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+            <button class="btn bs" onclick="testCLD()"><i class="fa-solid fa-plug"></i> Probar conexión</button>
+            <button class="btn bd btn-sm" onclick="clearCLD()"><i class="fa-solid fa-trash"></i> Borrar</button>
+          </div>
+          <div id="cld-test-result" style="font-size:13px;margin-top:10px"></div>
+        </div>
+
         <!-- SYNC ACTIONS -->
         <div class="tw" style="margin-bottom:22px" id="fb-sync-panel">
           <div class="tw-hdr"><h3>☁️ Sincronización con la Nube</h3></div>
@@ -648,36 +679,6 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
             <div style="font-size:13px;color:var(--ts);margin-bottom:16px;line-height:1.7">
               Sube todos tus datos a Firebase para acceder desde cualquier dispositivo.
               Los cambios de stock, precios y clientes se sincronizan automáticamente.
-            </div>
-            <!-- Cloudinary config -->
-            <div id="cld-panel" style="background:var(--cream2);border-radius:var(--rm);padding:14px;margin-bottom:16px;border:1.5px solid var(--mp)">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div>
-                  <div style="font-weight:600;font-size:14px;color:var(--md)">🖼️ Cloudinary — Fotos en la nube</div>
-                  <div id="cld-status-line" style="font-size:12px;color:var(--tl);margin-top:2px">Sin configurar — fotos solo en este dispositivo</div>
-                </div>
-                <div id="cld-dot" style="width:10px;height:10px;border-radius:50%;background:var(--tl);flex-shrink:0"></div>
-              </div>
-              <div style="font-size:12px;color:var(--ts);margin-bottom:10px;line-height:1.6">
-                Gratis para siempre · 25GB · Sin tarjeta de crédito<br>
-                <a href="https://cloudinary.com/users/register_free" target="_blank" style="color:var(--mauve);font-weight:500">→ Crear cuenta en cloudinary.com</a>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-                <div>
-                  <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cloud Name</div>
-                  <input class="finp" type="text" id="cld-name" style="height:36px" placeholder="ej: mi-tienda">
-                </div>
-                <div>
-                  <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Upload Preset (unsigned)</div>
-                  <input class="finp" type="text" id="cld-preset" style="height:36px" placeholder="ej: baily_upload">
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn bp btn-sm" onclick="saveCLD()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-                <button class="btn bs btn-sm" onclick="testCLD()"><i class="fa-solid fa-plug"></i> Probar conexión</button>
-                <button class="btn bd btn-sm" onclick="clearCLD()"><i class="fa-solid fa-trash"></i> Borrar</button>
-              </div>
-              <div id="cld-test-result" style="font-size:12px;margin-top:8px;color:var(--ts)"></div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
               <button class="btn bp btn-sm" onclick="syncToCloud('products')"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
@@ -3199,4 +3200,36 @@ function updateCLDStatus() {
 
 </script>
 </body>
-</html>
+</html
+        <!-- CLOUDINARY CONFIG — always visible -->
+        <div style="background:var(--cream2);border-radius:var(--rm);padding:18px;margin-bottom:18px;border:1.5px solid var(--mp);box-shadow:var(--sh)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-weight:600;font-size:15px;color:var(--md)">🖼️ Cloudinary — Fotos en la nube</div>
+              <div id="cld-status-line-old" style="font-size:12px;margin-top:2px;color:var(--tl)">Sin configurar</div>
+            </div>
+            <div id="cld-dot-old" style="width:12px;height:12px;border-radius:50%;background:var(--tl);flex-shrink:0"></div>
+          </div>
+          <div style="font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7">
+            Almacena las fotos en la nube · Gratis 25GB · Sin tarjeta de crédito<br>
+            <a href="https://cloudinary.com/users/register_free" target="_blank" style="color:var(--mauve);font-weight:500">→ Crear cuenta gratis en cloudinary.com</a>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Cloud Name</div>
+              <input class="finp" type="text" id="cld-name-old" style="height:38px" placeholder="ej: dsu0vdcvx">
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Upload Preset (unsigned)</div>
+              <input class="finp" type="text" id="cld-preset-old" style="height:38px" placeholder="ej: baily_upload">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn bp" onclick="saveCLD()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+            <button class="btn bs" onclick="testCLD()"><i class="fa-solid fa-plug"></i> Probar</button>
+            <button class="btn bd btn-sm" onclick="clearCLD()"><i class="fa-solid fa-trash"></i> Borrar</button>
+          </div>
+          <div id="cld-test-result-old" style="font-size:13px;margin-top:10px"></div>
+        </div>
+
+>
