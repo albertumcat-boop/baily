@@ -322,8 +322,8 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 
 /* ── PRODUCT IMAGE GALLERY ── */
 .gallery-wrap{position:relative;width:100%;height:310px;background:var(--cream2);overflow:hidden;touch-action:pan-y}
-.gallery-track{display:flex;height:100%;transition:transform .4s cubic-bezier(.4,0,.2,1)}
-.gallery-slide{min-width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.gallery-track{display:flex;height:100%;transition:transform .4s cubic-bezier(.4,0,.2,1);will-change:transform}
+.gallery-slide{width:100%;min-width:100%;max-width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-sizing:border-box}
 .gallery-slide img{width:100%;height:100%;object-fit:contain}
 .gallery-slide .g-em{font-size:100px}
 .gallery-prev,.gallery-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.92);border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--md);box-shadow:var(--shm);transition:all .2s;z-index:5;-webkit-tap-highlight-color:transparent}
@@ -924,6 +924,7 @@ function openM(id){
       </div>`;
   }
   _buildGallery();
+  setTimeout(()=>galleryGo(0),50);
   document.getElementById('m-body').innerHTML=`
     <div class="m-br">${p.brand}</div>
     <div class="m-nm">${p.name}</div>
@@ -1928,10 +1929,20 @@ function galleryNav(dir) {
 function galleryGo(i) {
   window._galleryIdx = i;
   const track = document.getElementById('g-track');
-  if (track) track.style.transform = `translateX(-${i * 100}%)`;
-  document.querySelectorAll('.g-dot').forEach((d, j) => d.classList.toggle('on', j === i));
+  if (track) {
+    // Use pixel-based translation for reliable mobile rendering
+    const wrap = track.parentElement;
+    const w = wrap ? wrap.offsetWidth : window.innerWidth;
+    track.style.transform = 'translateX(-' + (i * w) + 'px)';
+    // Ensure each slide is exactly the wrapper width
+    Array.from(track.children).forEach(slide => {
+      slide.style.width = w + 'px';
+      slide.style.minWidth = w + 'px';
+    });
+  }
+  document.querySelectorAll('.g-dot').forEach(function(d, j) { d.classList.toggle('on', j === i); });
   const countEl = document.querySelector('.gallery-count');
-  if (countEl) countEl.textContent = `${i + 1} / ${window._galleryImgs.length}`;
+  if (countEl) countEl.textContent = (i + 1) + ' / ' + window._galleryImgs.length;
 }
 
 
