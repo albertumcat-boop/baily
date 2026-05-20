@@ -826,7 +826,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px">
       <button class="btn bs" onclick="closePM()">Cancelar</button>
-      <button class="btn bp" onclick="saveP()"><i class="fa-solid fa-floppy-disk"></i> Guardar Producto</button>
+      <button class="btn bp" id="pm-save-btn" onclick="saveP()"><i class="fa-solid fa-floppy-disk"></i> Guardar Producto</button>
     </div>
   </div>
 </div>
@@ -1105,7 +1105,19 @@ initAll();
 
 // ── SAVE HELPERS ──
 function saveProds() {
-  localStorage.setItem(IK, JSON.stringify(PRODUCTS));
+  try {
+    localStorage.setItem(IK, JSON.stringify(PRODUCTS));
+  } catch(e) {
+    // localStorage quota exceeded - compress images in products
+    console.warn('[BAILY] localStorage quota exceeded, stripping base64 images from storage');
+    const stripped = PRODUCTS.map(p => {
+      const d = {...p};
+      if (d.img && d.img.startsWith('data:') && d.img.length > 50000) d.img = '';
+      if (Array.isArray(d.imgs)) d.imgs = d.imgs.map(u => u.startsWith('http') ? u : '').filter(Boolean);
+      return d;
+    });
+    try { localStorage.setItem(IK, JSON.stringify(stripped)); } catch(e2) { console.error('[BAILY] Cannot save to localStorage:', e2); }
+  }
   // Auto-sync individual product change to Firebase (background)
   if (fbReady && db && window._fbAutoSync !== false) {
     // Debounce: sync after 1.5 seconds of no changes
@@ -1386,6 +1398,11 @@ function editP(id) {
 }
 
 function saveP() {
+  // Don't save while images are still uploading
+  if (window._uploadingImgs) {
+    toast('⏳ Espera — las fotos aún se están subiendo...', 'err');
+    return;
+  }
   const nm    = document.getElementById('pm-nm').value.trim();
   const brand = document.getElementById('pm-br').value;
   const catId = document.getElementById('pm-cat').value;
@@ -1599,20 +1616,22 @@ function uploadPhoto(id, inp) {
   if (remaining <= 0) { toast('Ya tiene 5 fotos (máximo)', 'err'); return; }
   const toProcess = files.slice(0, remaining);
   let done = 0;
-  toast('Comprimiendo y subiendo ' + toProcess.length + ' foto(s)...');
+  toast('⏳ Subiendo ' + toProcess.length + ' foto(s)...');
   toProcess.forEach(file => {
     compressImage(file, async (dataUrl, kb) => {
-      const prodName = (p.name || 'prod').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const finalUrl = await uploadToStorage(dataUrl, prodName + '_' + p.id);
-      p.imgs.push(finalUrl);
+      try {
+        const url = await uploadToStorage(dataUrl, (p.name||'prod').replace(/[^a-z0-9]/gi,'_').toLowerCase() + '_' + p.id);
+        p.imgs.push(url);
+      } catch(e) {
+        p.imgs.push(dataUrl);
+      }
       p.img = p.imgs[0];
       done++;
       if (done === toProcess.length) {
         saveProds();
         renderPhotos();
-        const cfg = getCLD();
-        const isCloud = cfg && cfg.cloud;
-        toast(done + ' foto(s) ' + (isCloud ? 'subidas a Cloudinary ☁️ ✓' : 'guardadas (configura Cloudinary para verlas en otros dispositivos)'), isCloud ? 'ok' : '');
+        const isCloud = p.imgs.some(u => u.startsWith('http'));
+        toast(done + ' foto(s) guardadas · ' + (isCloud ? '☁️ en Cloudinary' : 'comprimidas localmente'), 'ok');
       }
     });
   });
@@ -2614,18 +2633,38 @@ function handleMultiImg(input) {
   if (remaining <= 0) { toast('Ya tienes 5 fotos (máximo)', 'err'); return; }
   const toProcess = files.slice(0, remaining);
   let done = 0;
-  toast('Comprimiendo y subiendo ' + toProcess.length + ' foto(s)...');
+
+  // Block save button while uploading
+  window._uploadingImgs = true;
+  const saveBtn = document.querySelector('#pm-bg .btn.bp');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos...'; }
+  toast('⏳ Subiendo ' + toProcess.length + ' foto(s) a Cloudinary...', '');
+
   toProcess.forEach(file => {
     compressImage(file, async (dataUrl, kb) => {
-      // Upload to Firebase Storage if available
       const prodName = (document.getElementById('pm-nm').value || 'prod').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const finalUrl = await uploadToStorage(dataUrl, prodName);
-      current.push(finalUrl);
+      try {
+        const finalUrl = await uploadToStorage(dataUrl, prodName);
+        current.push(finalUrl);
+      } catch(e) {
+        current.push(dataUrl); // fallback to base64
+      }
       done++;
+      // Update progress
+      const saveBtn2 = document.querySelector('#pm-bg .btn.bp');
+      if (saveBtn2) saveBtn2.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo ' + done + '/' + toProcess.length + '...';
+
       if (done === toProcess.length) {
         document.getElementById('pm-imgs-data').value = JSON.stringify(current);
         renderImgPreviews(current);
-        toast(done + ' foto(s) guardadas ✓', 'ok');
+        // Re-enable save button
+        window._uploadingImgs = false;
+        if (saveBtn2) {
+          saveBtn2.disabled = false;
+          saveBtn2.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar producto';
+        }
+        const isCloud = current.some(u => u.startsWith('http'));
+        toast(done + ' foto(s) listas · ' + (isCloud ? '☁️ en Cloudinary' : 'comprimidas'), 'ok');
       }
     });
   });
@@ -2796,14 +2835,17 @@ async function syncToCloud(type) {
         const batch = db.batch();
         chunk.forEach(p => {
           const doc = {...p};
-          // Safety check: if doc is too large, strip images to avoid Firestore 1MB limit
-          const docJson = JSON.stringify(doc);
-          if (docJson.length > 900000) {
-            // Strip images from this product - it's too large
-            doc.img = doc.img && doc.img.startsWith('http') ? doc.img : '';
-            doc.imgs = Array.isArray(doc.imgs) ? doc.imgs.filter(u => u.startsWith('http')) : [];
-            doc._imgsTooLarge = true;
-            console.warn('[BAILY] Product', p.id, 'images too large for Firestore, stripping base64');
+          // Firestore limit: 1MB per document
+          // Strip base64 images (keep Cloudinary https:// URLs)
+          if (doc.img && doc.img.startsWith('data:')) doc.img = '';
+          if (Array.isArray(doc.imgs)) {
+            doc.imgs = doc.imgs.map(u => (u && u.startsWith('http')) ? u : '').filter(Boolean);
+          }
+          // Verify size is OK
+          const docSize = JSON.stringify(doc).length;
+          if (docSize > 950000) {
+            console.warn('[BAILY] Doc still too large after stripping:', docSize, 'bytes — truncating desc');
+            if (doc.desc && doc.desc.length > 500) doc.desc = doc.desc.substring(0, 500) + '...';
           }
           batch.set(db.collection('products').doc(p.id), doc);
         });
@@ -3336,6 +3378,23 @@ function editCat(id) {
   else { prev.style.display = 'none'; }
   document.querySelector('#cm-bg .m-ttl span').textContent = 'Editar Categoría';
   document.getElementById('cm-bg').classList.add('on');
+}
+
+
+// Sync a single product to Firestore immediately
+async function syncOneProduct(p) {
+  if (!fbReady || !db) return;
+  try {
+    const doc = {...p};
+    // Always strip base64 - only keep Cloudinary URLs
+    if (doc.img && doc.img.startsWith('data:')) doc.img = '';
+    if (Array.isArray(doc.imgs)) doc.imgs = doc.imgs.map(u => u && u.startsWith('http') ? u : '').filter(Boolean);
+    await db.collection('products').doc(p.id).set(doc);
+    console.log('[BAILY] Synced product:', p.id, p.name);
+  } catch(e) {
+    console.error('[BAILY] Failed to sync product:', p.id, e.message);
+    throw e;
+  }
 }
 
 </script>
