@@ -2217,6 +2217,29 @@ function updMobBadge(){
   else badge.style.display='none';
 }
 
+
+async function loadBlogFromFirestore() {
+  if (!_storeDb) return;
+  try {
+    const doc = await _storeDb.collection('settings').doc('blog').get();
+    if (doc.exists && doc.data().list && doc.data().list.length) {
+      localStorage.setItem('baily_blog_v1', JSON.stringify(doc.data().list));
+      console.log('[BAILY Store] Blog loaded from Firestore:', doc.data().list.length, 'posts');
+    }
+  } catch(e) { console.log('[BAILY Store] Blog load error:', e.message); }
+}
+
+async function loadPromosFromFirestore() {
+  if (!_storeDb) return;
+  try {
+    const doc = await _storeDb.collection('settings').doc('promos').get();
+    if (doc.exists && doc.data().list && doc.data().list.length) {
+      localStorage.setItem('baily_promos_v1', JSON.stringify(doc.data().list));
+      console.log('[BAILY Store] Promos loaded from Firestore:', doc.data().list.length);
+    }
+  } catch(e) { console.log('[BAILY Store] Promos load error:', e.message); }
+}
+
 </script>
 
 <!-- ADMIN ACCESS MODAL -->
