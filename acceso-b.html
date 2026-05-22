@@ -951,9 +951,17 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         </select>
       </div>
       <div class="fgrp full">
-        <span class="flbl">URL de YouTube (opcional)</span>
-        <input class="finp" type="url" id="bp-url" placeholder="https://www.youtube.com/watch?v=...">
-        <div style="font-size:11px;color:var(--tl);margin-top:3px">Pega el link del video. También acepta links cortos youtu.be/...</div>
+        <span class="flbl">Video</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;margin-top:4px">
+          <label class="btn bs btn-sm" style="cursor:pointer" id="bp-upload-btn">
+            <i class="fa-solid fa-video"></i> Subir video
+            <input type="file" accept="video/*" style="display:none" id="bp-video-file" onchange="handleBlogVideo(this)">
+          </label>
+          <span style="font-size:12px;color:var(--tl);align-self:center">o pega un link de YouTube:</span>
+        </div>
+        <input class="finp" type="url" id="bp-url" placeholder="https://www.youtube.com/watch?v=... (opcional)">
+        <div id="bp-video-status" style="font-size:12px;margin-top:6px;color:var(--ts)"></div>
+        <input type="hidden" id="bp-video-url">
       </div>
       <div class="fgrp full">
         <span class="flbl">Imagen de portada (si no hay video)</span>
@@ -2326,8 +2334,8 @@ function getDefaultBlog()   { try { return JSON.parse(document.getElementById('d
 function getPromos() {
   try { const s = localStorage.getItem(PROMO_KEY); return s ? JSON.parse(s) : getDefaultPromos(); } catch(e) { return getDefaultPromos(); }
 }
-function savePromos(data) { localStorage.setItem(PROMO_KEY, JSON.stringify(data)); }
-
+function savePromos(data) {
+  localStorage.setItem(PROMO_KEY, JSON.stringify(data));
   if (fbReady && db) {
     db.collection('settings').doc('promos').set({list: data})
       .catch(e => console.warn('[BAILY] Promos sync error:', e.message));
@@ -2486,7 +2494,7 @@ function savePost() {
     id:       'bl' + Date.now(),
     title,
     category: document.getElementById('bp-cat').value,
-    url:      document.getElementById('bp-url').value.trim(),
+    url:      document.getElementById('bp-video-url').value || document.getElementById('bp-url').value.trim(),
     thumb:    document.getElementById('bp-thumb').value,
     excerpt:  document.getElementById('bp-excerpt').value.trim(),
     date:     document.getElementById('bp-date').value,
@@ -3408,6 +3416,70 @@ async function syncOneProduct(p) {
     console.error('[BAILY] Failed to sync product:', p.id, e.message);
     throw e;
   }
+}
+
+
+// ── BLOG VIDEO UPLOAD ──
+async function handleBlogVideo(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+
+  // Check size - warn if > 100MB
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  const status = document.getElementById('bp-video-status');
+  const btn = document.getElementById('bp-upload-btn');
+
+  if (file.size > 200 * 1024 * 1024) {
+    if (status) status.innerHTML = '<span style="color:var(--err)">❌ Video muy grande (máx 200MB). Comprime el video primero.</span>';
+    inp.value = '';
+    return;
+  }
+
+  const cfg = getCLD();
+  if (!cfg || !cfg.cloud) {
+    if (status) status.innerHTML = '<span style="color:var(--err)">❌ Configura Cloudinary primero en Firebase / Nube</span>';
+    return;
+  }
+
+  // Show progress
+  if (status) status.innerHTML = '⏳ Subiendo video (' + mb + 'MB)... puede tardar un momento';
+  if (btn) btn.querySelector('i').className = 'fa-solid fa-spinner fa-spin';
+  toast('⏳ Subiendo video ' + mb + 'MB...', '');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', cfg.preset);
+    form.append('folder', 'baily-blog');
+    form.append('resource_type', 'video');
+
+    const r = await fetch('https://api.cloudinary.com/v1_1/' + cfg.cloud + '/video/upload', {
+      method: 'POST', body: form
+    });
+    const data = await r.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const url = data.secure_url;
+    document.getElementById('bp-video-url').value = url;
+    if (status) status.innerHTML = '✅ Video subido (' + mb + 'MB) · <a href="' + url + '" target="_blank" style="color:var(--mauve)">Ver video</a>';
+    if (btn) btn.querySelector('i').className = 'fa-solid fa-check';
+    toast('✅ Video subido a Cloudinary ☁️', 'ok');
+
+    // Auto-set thumbnail from video
+    const thumbEl = document.getElementById('bp-thumb');
+    if (thumbEl && !thumbEl.value) {
+      // Cloudinary auto-generates thumbnail
+      const thumb = url.replace('/video/upload/', '/video/upload/so_0/').replace(/\.\w+$/, '.jpg');
+      thumbEl.value = thumb;
+    }
+
+  } catch(e) {
+    if (status) status.innerHTML = '<span style="color:var(--err)">❌ Error: ' + e.message + '</span>';
+    if (btn) btn.querySelector('i').className = 'fa-solid fa-video';
+    toast('❌ Error subiendo video: ' + e.message, 'err');
+  }
+  inp.value = '';
 }
 
 </script>
