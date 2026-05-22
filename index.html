@@ -1944,7 +1944,7 @@ function renderBlog() {
   wrap.style.display = 'block';
 
   grid.innerHTML = posts.map(p => {
-    const hasVideo = p.url && p.url.includes('youtube');
+    const hasVideo = p.url && (p.url.includes('youtube') || p.url.includes('youtu.be') || p.url.includes('cloudinary') || p.url.match(/\.(mp4|mov|webm)$/i));
     const thumbHtml = hasVideo
       ? `<div class="blog-play"><i class="fa-solid fa-circle-play"></i></div>`
       : p.thumb
@@ -1964,22 +1964,50 @@ function renderBlog() {
 }
 
 function openVid(url) {
-  // Convert youtube watch URL to embed if needed
-  let embed = url;
-  if (url.includes('watch?v=')) embed = url.replace('watch?v=', 'embed/').split('&')[0];
-  else if (url.includes('youtu.be/')) embed = 'https://www.youtube.com/embed/' + url.split('youtu.be/')[1].split('?')[0];
-  document.getElementById('vid-frame').src = embed + '?autoplay=1';
-  document.getElementById('vid-overlay').classList.add('open');
+  const vidModal = document.getElementById('vid-modal');
+  const frame = document.getElementById('vid-frame');
+  const direct = document.getElementById('vid-direct');
+
+  // Check if direct video (Cloudinary/mp4) or YouTube
+  const isYoutube = url.includes('youtube') || url.includes('youtu.be');
+
+  if (isYoutube) {
+    let embed = url;
+    if (url.includes('watch?v=')) embed = url.replace('watch?v=', 'embed/').split('&')[0];
+    else if (url.includes('youtu.be/')) embed = 'https://www.youtube.com/embed/' + url.split('youtu.be/')[1].split('?')[0];
+    if (frame) { frame.src = embed + '?autoplay=1'; frame.style.display = 'block'; }
+    if (direct) direct.style.display = 'none';
+  } else {
+    // Direct video (Cloudinary, mp4, etc)
+    if (frame) { frame.src = ''; frame.style.display = 'none'; }
+    if (!direct) {
+      // Create video element if not exists
+      const v = document.createElement('video');
+      v.id = 'vid-direct';
+      v.controls = true;
+      v.autoplay = true;
+      v.style.cssText = 'width:100%;max-height:70vh;background:#000;display:block';
+      frame && frame.parentElement.insertBefore(v, frame);
+    }
+    const vEl = document.getElementById('vid-direct');
+    if (vEl) { vEl.src = url; vEl.style.display = 'block'; vEl.load(); vEl.play().catch(()=>{}); }
+  }
+
+  if (vidModal) vidModal.classList.add('on');
   document.body.style.overflow = 'hidden';
 }
+
+
 function closeVid() {
-  document.getElementById('vid-frame').src = '';
-  document.getElementById('vid-overlay').classList.remove('open');
+  const frame = document.getElementById('vid-frame');
+  const direct = document.getElementById('vid-direct');
+  if (frame) frame.src = '';
+  if (direct) { direct.pause && direct.pause(); direct.src = ''; direct.style.display = 'none'; }
+  const vidModal = document.getElementById('vid-modal');
+  if (vidModal) vidModal.classList.remove('on');
   document.body.style.overflow = '';
 }
 
-
-// Long press on logo (2 seconds) → open admin
 
 function logoTouchStart() {
   _lpTimer = setTimeout(() => {
