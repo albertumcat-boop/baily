@@ -432,6 +432,37 @@ var _selTone=null;
   .mob-nav{display:none!important}
 }
 
+
+/* ── HAMBURGER SIDE MENU ── */
+.ham-menu-btn{width:42px;height:42px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:var(--r);flex-shrink:0;transition:background .2s}
+.ham-menu-btn:hover{background:var(--mp)}
+.ham-menu-btn span{display:block;width:22px;height:2px;background:var(--md);border-radius:2px;transition:all .3s}
+.ham-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.ham-menu-btn.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.ham-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.side-overlay{position:fixed;inset:0;background:rgba(44,36,32,.45);z-index:400;opacity:0;pointer-events:none;transition:opacity .3s}
+.side-overlay.on{opacity:1;pointer-events:all}
+.side-menu{position:fixed;left:0;top:0;bottom:0;width:300px;max-width:88vw;background:var(--white);z-index:500;transform:translateX(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:4px 0 24px rgba(44,36,32,.18)}
+.side-menu.on{transform:translateX(0)}
+.side-menu-hdr{padding:18px 18px 14px;border-bottom:var(--border);display:flex;align-items:center;justify-content:space-between}
+.side-menu-logo{font-family:Georgia,serif;font-size:22px;color:var(--mauve);letter-spacing:2px}
+.side-menu-logo em{color:var(--gold);font-style:normal}
+.side-close{width:34px;height:34px;border:none;background:var(--mp);border-radius:50%;cursor:pointer;font-size:15px;color:var(--md);display:flex;align-items:center;justify-content:center}
+.side-sec{padding:12px 18px 5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tl)}
+.side-btn{display:flex;align-items:center;gap:12px;padding:11px 18px;font-size:14px;color:var(--text);cursor:pointer;transition:background .15s;border:none;background:none;width:100%;font-family:inherit;text-align:left}
+.side-btn:hover{background:var(--mp);color:var(--mauve)}
+.side-btn i{width:20px;text-align:center;color:var(--mauve);font-size:14px;flex-shrink:0}
+.side-btn img{width:28px;height:28px;object-fit:contain;border-radius:4px;flex-shrink:0;border:var(--border)}
+.side-divider{height:1px;background:var(--mp);margin:6px 0}
+.side-brands-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:58px;background:var(--white);border-top:var(--border);z-index:300;align-items:center;justify-content:space-around;box-shadow:0 -2px 12px rgba(44,36,32,.08)}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:1;height:100%;background:none;border:none;cursor:pointer;color:var(--tl);font-family:inherit;font-size:9px;font-weight:500;transition:color .2s;-webkit-tap-highlight-color:transparent;position:relative}
+.mob-nav-btn i{font-size:19px}
+.mob-nav-btn.on{color:var(--mauve)}
+.mob-cart-badge{position:absolute;top:6px;left:calc(50% + 5px);background:var(--mauve);color:#fff;min-width:15px;height:15px;border-radius:8px;font-size:9px;display:none;align-items:center;justify-content:center;font-weight:700;padding:0 3px}
+@media(max-width:768px){.mob-nav{display:flex}body{padding-bottom:58px}}
+@media(min-width:769px){.mob-nav{display:none!important}}
+
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 productos y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores esta semana", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío nacional gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto de mañana a noche.", "date": "2026-05-01", "active": true}, {"id": "bl2", "title": "Tendencias de maquillaje 2026", "category": "Tendencias", "type": "video", "url": "", "thumb": "", "excerpt": "Lo que se lleva esta temporada: piel de vidrio, labios glossy y mucho más.", "date": "2026-04-20", "active": true}]</script>
@@ -452,6 +483,7 @@ var _selTone=null;
 <header class="site-hdr">
   <div class="hdr-top">
     <div class="logo" onclick="logoClick()" id="logo-btn" title="" ontouchstart="logoTouchStart()" ontouchend="logoTouchEnd()" onmousedown="logoTouchStart()" onmouseup="logoTouchEnd()" onmouseleave="logoTouchEnd()">B<em>A</em>ILY</div>
+    <button class="ham-menu-btn" id="ham-btn" onclick="toggleSideMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
     <div class="hdr-search" style="position:relative">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="text" id="srch-inp" placeholder="Buscar productos, marcas, #etiquetas..."
@@ -546,8 +578,7 @@ var _selTone=null;
   </div>
   <!-- PROMO SLIDER -->
   <div id="promo-wrap" style="margin-bottom:24px;border-radius:var(--rm);overflow:hidden"><div class="promo-track" id="promo-track" style="display:flex;transition:transform .55s cubic-bezier(.4,0,.2,1)"></div><div class="promo-dots" id="promo-dots" style="display:flex;gap:6px;justify-content:center;padding:8px;background:rgba(0,0,0,.18)"></div></div>
-  <!-- BLOG -->
-  <div id="blog-wrap" style="display:none;margin-bottom:28px"><h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:var(--md);letter-spacing:.5px;margin-bottom:6px" id="blog-sec-title">Blog & Tutoriales</h2><div style="height:2px;background:linear-gradient(90deg,var(--mauve),transparent);margin-bottom:18px;width:60px"></div><div class="blog-grid" id="blog-grid"></div></div>
+
 
   
 
@@ -589,6 +620,11 @@ var _selTone=null;
     <div class="subcat-row" id="subcat-row"></div>
     <div class="prod-grid" id="prods-grid"></div>
   </section>
+
+  <!-- BLOG & TUTORIALES -->
+  <!-- BLOG -->
+  <div id="blog-wrap" style="display:none;margin-bottom:28px"><h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:var(--md);letter-spacing:.5px;margin-bottom:6px" id="blog-sec-title">Blog & Tutoriales</h2><div style="height:2px;background:linear-gradient(90deg,var(--mauve),transparent);margin-bottom:18px;width:60px"></div><div class="blog-grid" id="blog-grid"></div></div>
+
 </main>
 
 <!-- FOOTER -->
@@ -2162,52 +2198,76 @@ function closeNavDropdowns() {
   setTimeout(() => document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.style.display = ''), 300);
 }
 
-function goHome() {
-  document.getElementById('brands-section').style.display = 'block';
-  document.getElementById('cats-section').style.display = 'none';
-  document.getElementById('prods-section').style.display = 'none';
-  document.getElementById('search-results-section').style.display = 'none';
-  selBrand = null; selCat = null;
+
+
+
+
+function toggleSideMenu(){
+  var menu=document.getElementById('side-menu');
+  var ov=document.getElementById('side-overlay');
+  var btn=document.getElementById('ham-btn');
+  if(menu.classList.contains('on')){closeSideMenu();return;}
+  buildSideMenu();
+  menu.classList.add('on');ov.classList.add('on');
+  if(btn)btn.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeSideMenu(){
+  document.getElementById('side-menu').classList.remove('on');
+  document.getElementById('side-overlay').classList.remove('on');
+  var btn=document.getElementById('ham-btn');
+  if(btn)btn.classList.remove('open');
+  document.body.style.overflow='';
+}
+function buildSideMenu(){
+  var meta=JSON.parse(localStorage.getItem('baily_brand_meta')||'{}');
+  var bList=document.getElementById('side-brands-list');
+  if(bList)bList.innerHTML=BRANDS.map(function(b){
+    var img=meta[b]&&meta[b].img
+      ?'<img src="'+meta[b].img+'">'
+      :'<i class="fa-solid fa-tag" style="width:28px;text-align:center;color:var(--mauve);font-size:14px"></i>';
+    return '<button class="side-btn" onclick="selectBrand(''+b+'');closeSideMenu()" style="font-size:13px">'+img+b+'</button>';
+  }).join('');
+  var cList=document.getElementById('side-cats-list');
+  if(cList)cList.innerHTML=Object.entries(CATS).map(function(e){
+    var id=e[0],c=e[1];
+    var ico=c.img
+      ?'<img src="'+c.img+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px">'
+      :'<span style="font-size:18px;width:28px;display:inline-block;text-align:center">'+(c.icon||'💄')+'</span>';
+    return '<button class="side-btn" onclick="selectCat(''+id+'');closeSideMenu()">'+ico+c.name+'</button>';
+  }).join('');
+}
+function goHome(){
+  document.getElementById('brands-section').style.display='block';
+  document.getElementById('cats-section').style.display='none';
+  document.getElementById('prods-section').style.display='none';
+  document.getElementById('search-results-section').style.display='none';
+  selBrand=null;selCat=null;
   renderBrands();
-  window.scrollTo({top:0, behavior:'smooth'});
-  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('on'));
-  const h = document.getElementById('mob-home'); if(h) h.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
 }
-
-function goSection(sec) {
-  if (sec === 'promos') {
-    const el = document.getElementById('promo-section');
-    if (el) el.scrollIntoView({behavior:'smooth'});
-  } else if (sec === 'blog') {
-    const el = document.getElementById('blog-section');
-    if (el) el.scrollIntoView({behavior:'smooth'});
-  }
+function goSection(sec){
+  var ids={promos:'promo-section',blog:'blog-section'};
+  var el=document.getElementById(ids[sec]);
+  if(el)el.scrollIntoView({behavior:'smooth'});
 }
-
-// Mobile nav
-function mobNav(sec, btn) {
-  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('on'));
-  if (btn) btn.classList.add('on');
-  if (sec === 'home')   { goHome(); }
-  else if (sec === 'search') {
-    const inp = document.getElementById('srch-inp');
-    if (inp) { inp.focus(); inp.scrollIntoView({behavior:'smooth', block:'center'}); }
+function mobNav(sec,btn){
+  document.querySelectorAll('.mob-nav-btn').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  if(sec==='home')goHome();
+  else if(sec==='search'){
+    var inp=document.getElementById('srch-inp');
+    if(inp){window.scrollTo({top:0,behavior:'smooth'});setTimeout(function(){inp.focus();},300);}
   }
-  else if (sec === 'cart')   { openCart(); }
-  else if (sec === 'blog')   { goSection('blog'); }
-  else if (sec === 'brands') {
-    goHome();
-    setTimeout(() => scrollToSection('brands-section'), 300);
-  }
+  else if(sec==='cart'){openCart();if(btn)btn.classList.remove('on');}
+  else if(sec==='blog')goSection('blog');
 }
-
-// Update cart badge in mobile nav
-function updMobBadge() {
-  const badge = document.getElementById('mob-badge-txt');
-  if (!badge) return;
-  const total = cart.reduce((s,i)=>s+i.qty,0);
-  if (total > 0) { badge.textContent = total > 9 ? '9+' : total; badge.style.display = 'flex'; }
-  else { badge.style.display = 'none'; }
+function updMobBadge(){
+  var badge=document.getElementById('mob-cart-badge');
+  if(!badge)return;
+  var n=cart.reduce(function(s,i){return s+i.qty;},0);
+  if(n>0){badge.textContent=n>9?'9+':n;badge.style.display='flex';}
+  else badge.style.display='none';
 }
 
 </script>
@@ -2231,5 +2291,29 @@ function updMobBadge() {
 <!-- TAP HINT -->
 <div class="admin-tap-hint" id="admin-tap-hint"></div>
 
+
+<div class="side-overlay" id="side-overlay" onclick="closeSideMenu()"></div>
+<div class="side-menu" id="side-menu">
+  <div class="side-menu-hdr">
+    <div class="side-menu-logo">B<em>A</em>ILY</div>
+    <button class="side-close" onclick="closeSideMenu()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <button class="side-btn" onclick="goHome();closeSideMenu()"><i class="fa-solid fa-house"></i>Inicio</button>
+  <button class="side-btn" onclick="goSection('promos');closeSideMenu()"><i class="fa-solid fa-percent"></i>Ofertas</button>
+  <button class="side-btn" onclick="goSection('blog');closeSideMenu()"><i class="fa-solid fa-video"></i>Blog y Videos</button>
+  <div class="side-divider"></div>
+  <div class="side-sec">Marcas</div>
+  <div class="side-brands-grid" id="side-brands-list"></div>
+  <div class="side-divider"></div>
+  <div class="side-sec">Categorias</div>
+  <div id="side-cats-list"></div>
+</div>
+<nav class="mob-nav">
+  <button class="mob-nav-btn on" id="mob-home" onclick="mobNav('home',this)"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+  <button class="mob-nav-btn" onclick="mobNav('search',this)"><i class="fa-solid fa-magnifying-glass"></i><span>Buscar</span></button>
+  <button class="mob-nav-btn" onclick="mobNav('cart',this)"><i class="fa-solid fa-cart-shopping"></i><span class="mob-cart-badge" id="mob-cart-badge"></span><span>Carrito</span></button>
+  <button class="mob-nav-btn" onclick="mobNav('blog',this)"><i class="fa-solid fa-video"></i><span>Blog</span></button>
+  <button class="mob-nav-btn" onclick="toggleSideMenu()"><i class="fa-solid fa-bars"></i><span>Menu</span></button>
+</nav>
 </body>
 </html>
