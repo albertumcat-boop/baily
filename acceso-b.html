@@ -348,6 +348,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
     </label>
     <div class="pw-error" id="pw-err"></div>
     <div class="pw-attempts" id="pw-att"></div>
+    <div id="pw-locked" style="font-size:12px;color:var(--err);margin-top:4px"></div>
     <div style="margin-top:16px">
       <button class="pw-btn" id="pw-btn-main" onclick="checkPw()">
         <i class="fa-solid fa-lock-open"></i> Entrar
@@ -3480,6 +3481,23 @@ async function handleBlogVideo(inp) {
     toast('❌ Error subiendo video: ' + e.message, 'err');
   }
   inp.value = '';
+}
+
+
+function emergencyReset() {
+  if (!confirm('¿Restablecer el acceso? Esto borrará el bloqueo y volverá la contraseña a "baily2026".')) return;
+  localStorage.removeItem('baily_admin_lock');
+  localStorage.removeItem('baily_admin_pw');
+  localStorage.removeItem('baily_pw');
+  sessionStorage.removeItem('baily_admin_auth');
+  document.getElementById('pw-inp').disabled = false;
+  document.getElementById('pw-btn-main').disabled = false;
+  document.getElementById('pw-err').textContent = '';
+  document.getElementById('pw-att').textContent = '';
+  document.getElementById('pw-locked').textContent = '';
+  document.getElementById('pw-inp').value = '';
+  document.getElementById('pw-inp').focus();
+  alert('Acceso restablecido. Usa la contraseña: baily2026');
 }
 
 </script>
