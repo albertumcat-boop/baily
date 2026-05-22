@@ -2226,17 +2226,18 @@ function buildSideMenu(){
     var img=meta[b]&&meta[b].img
       ?'<img src="'+meta[b].img+'">'
       :'<i class="fa-solid fa-tag" style="width:28px;text-align:center;color:var(--mauve);font-size:14px"></i>';
-    return '<button class="side-btn" onclick="selectBrand(''+b+'');closeSideMenu()" style="font-size:13px">'+img+b+'</button>';
+    return '<button class="side-btn" onclick="selectBrand(this.dataset.b);closeSideMenu()" data-b="'+b+'" style="font-size:13px">'+img+b+'</button>';
   }).join('');
   var cList=document.getElementById('side-cats-list');
-  if(cList)cList.innerHTML=Object.entries(CATS).map(function(e){
-    var id=e[0],c=e[1];
+  if(cList)cList.innerHTML=Object.entries(CATS).map(function(entry){
+    var id=entry[0],c=entry[1];
     var ico=c.img
       ?'<img src="'+c.img+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px">'
       :'<span style="font-size:18px;width:28px;display:inline-block;text-align:center">'+(c.icon||'💄')+'</span>';
-    return '<button class="side-btn" onclick="selectCat(''+id+'');closeSideMenu()">'+ico+c.name+'</button>';
+    return '<button class="side-btn" onclick="selectCat(this.dataset.id);closeSideMenu()" data-id="'+id+'">'+ico+c.name+'</button>';
   }).join('');
 }
+
 function goHome(){
   document.getElementById('brands-section').style.display='block';
   document.getElementById('cats-section').style.display='none';
