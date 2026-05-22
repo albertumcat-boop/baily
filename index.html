@@ -398,6 +398,40 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 .tone-info{font-size:11px;color:var(--tl);margin-top:8px}
 
 var _selTone=null;
+
+/* ── PC NAVIGATION MENU ── */
+.nav-bar{background:var(--white);border-bottom:var(--border);padding:0 20px;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none}
+.nav-bar::-webkit-scrollbar{display:none}
+.nav-item{white-space:nowrap;padding:10px 14px;font-size:13px;color:var(--ts);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:6px;border-top:none;border-left:none;border-right:none;background:none;font-family:inherit}
+.nav-item:hover{color:var(--mauve);border-bottom-color:var(--mp)}
+.nav-item.on{color:var(--mauve);font-weight:600;border-bottom-color:var(--mauve)}
+.nav-item i{font-size:12px}
+.nav-dropdown{position:relative}
+.nav-dropdown-menu{position:absolute;top:100%;left:0;background:var(--white);border:var(--border);border-radius:var(--rm);box-shadow:var(--shm);z-index:200;min-width:180px;padding:6px 0;display:none;max-height:320px;overflow-y:auto}
+.nav-dropdown:hover .nav-dropdown-menu{display:block}
+.nav-drop-item{padding:9px 16px;font-size:13px;color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;white-space:nowrap}
+.nav-drop-item:hover{background:var(--mp);color:var(--mauve)}
+.nav-drop-item img{width:24px;height:24px;object-fit:contain;border-radius:3px}
+.nav-all-btn{padding:8px 16px;font-size:12px;color:var(--mauve);font-weight:600;border-top:var(--border);cursor:pointer;text-align:center;display:block}
+.nav-all-btn:hover{background:var(--mp)}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--white);border-top:var(--border);z-index:300;align-items:center;justify-content:space-around;box-shadow:0 -2px 12px rgba(44,36,32,.08)}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;height:100%;background:none;border:none;cursor:pointer;color:var(--tl);font-family:inherit;font-size:9px;font-weight:500;transition:color .2s;-webkit-tap-highlight-color:transparent;padding:6px 0}
+.mob-nav-btn i{font-size:20px}
+.mob-nav-btn.on{color:var(--mauve)}
+.mob-nav-btn .mob-badge{position:absolute;top:8px;background:var(--mauve);color:#fff;width:16px;height:16px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.mob-nav-cart{position:relative}
+@media(max-width:768px){
+  .nav-bar{display:none}
+  .mob-nav{display:flex}
+  body{padding-bottom:60px}
+  .site-hdr{position:sticky;top:0;z-index:100}
+}
+@media(min-width:769px){
+  .mob-nav{display:none!important}
+}
+
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 productos y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores esta semana", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío nacional gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto de mañana a noche.", "date": "2026-05-01", "active": true}, {"id": "bl2", "title": "Tendencias de maquillaje 2026", "category": "Tendencias", "type": "video", "url": "", "thumb": "", "excerpt": "Lo que se lleva esta temporada: piel de vidrio, labios glossy y mucho más.", "date": "2026-04-20", "active": true}]</script>
@@ -434,8 +468,51 @@ var _selTone=null;
         <div class="cart-dot" id="cart-dot" style="display:none">0</div>
       </button>
     </div>
-  </div>
+    <!-- PC NAVIGATION BAR -->
+  <nav class="nav-bar" id="nav-bar">
+    <button class="nav-item" onclick="goHome()"><i class="fa-solid fa-house"></i> Inicio</button>
+    <div class="nav-dropdown">
+      <button class="nav-item"><i class="fa-solid fa-tag"></i> Marcas <i class="fa-solid fa-chevron-down" style="font-size:9px"></i></button>
+      <div class="nav-dropdown-menu" id="nav-brands-menu">
+        <div style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px">Marcas</div>
+      </div>
+    </div>
+    <div class="nav-dropdown">
+      <button class="nav-item"><i class="fa-solid fa-layer-group"></i> Categorías <i class="fa-solid fa-chevron-down" style="font-size:9px"></i></button>
+      <div class="nav-dropdown-menu" id="nav-cats-menu">
+        <div style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px">Categorías</div>
+      </div>
+    </div>
+    <button class="nav-item" onclick="goSection('promos')"><i class="fa-solid fa-percent"></i> Ofertas</button>
+    <button class="nav-item" onclick="goSection('blog')"><i class="fa-solid fa-video"></i> Blog & Videos</button>
+  </nav>
+</div>
 </header>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mob-nav" id="mob-nav">
+  <button class="mob-nav-btn on" id="mob-home" onclick="mobNav('home',this)">
+    <i class="fa-solid fa-house"></i>
+    <span>Inicio</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-search" onclick="mobNav('search',this)">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span>Buscar</span>
+  </button>
+  <button class="mob-nav-btn mob-nav-cart" id="mob-cart" onclick="mobNav('cart',this)">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <span id="mob-badge-txt" style="display:none;position:absolute;top:6px;left:50%;margin-left:4px;background:var(--mauve);color:#fff;width:16px;height:16px;border-radius:50%;font-size:9px;line-height:16px;text-align:center;font-weight:700"></span>
+    <span>Carrito</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-blog" onclick="mobNav('blog',this)">
+    <i class="fa-solid fa-video"></i>
+    <span>Blog</span>
+  </button>
+  <button class="mob-nav-btn" id="mob-brands" onclick="mobNav('brands',this)">
+    <i class="fa-solid fa-tag"></i>
+    <span>Marcas</span>
+  </button>
+</nav>
 
 <!-- HERO -->
 <section class="hero">
@@ -853,16 +930,7 @@ function filterSub(s,btn){
   document.getElementById('prods-grid').innerHTML=list.map(pCard).join('');
 }
 
-function goHome(){
-  selBrand=null;selCat=null;selSubcat=null;
-  document.getElementById('brands-section').style.display='block';
-  document.getElementById('cats-section').style.display='none';
-  document.getElementById('prods-section').style.display='none';
-  document.getElementById('arr1').style.display='none';
-  document.getElementById('arr2').style.display='none';
-  document.getElementById('step-brand').style.display='none';
-  document.getElementById('step-cat').style.display='none';
-}
+
 function goCats(){
   selCat=null;selSubcat=null;
   document.getElementById('cats-section').style.display='block';
@@ -1522,11 +1590,13 @@ updBadge();
 renderPromoSlider();
 renderBlog();
 // Load fresh data from Firestore (updates products, config in background)
+buildNavMenus();
 setTimeout(async () => {
   await loadCFGFromFirestore();
   await loadProdsFromFirestore();
   renderPromoSlider();
   renderBlog();
+  buildNavMenus(); // rebuild with fresh data
 }, 800);
 
 
@@ -2061,6 +2131,84 @@ function scrollRel(gridId, dir) {
     }
   }, { passive: true });
 })();
+
+
+// ── NAVIGATION ──
+function buildNavMenus() {
+  // Brands dropdown
+  const bMenu = document.getElementById('nav-brands-menu');
+  if (bMenu) {
+    const items = BRANDS.slice(0,20).map(b => {
+      const meta = JSON.parse(localStorage.getItem('baily_brand_meta')||'{}');
+      const img = meta[b]&&meta[b].img ? `<img src="${meta[b].img}">` : '<i class="fa-solid fa-tag" style="font-size:14px;color:var(--mauve)"></i>';
+      return `<div class="nav-drop-item" onclick="selectBrand('${b}');closeNavDropdowns()">${img}${b}</div>`;
+    }).join('');
+    bMenu.innerHTML = bMenu.firstElementChild.outerHTML + items +
+      (BRANDS.length > 20 ? `<span class="nav-all-btn" onclick="goHome()">Ver todas (${BRANDS.length})</span>` : '');
+  }
+  // Cats dropdown
+  const cMenu = document.getElementById('nav-cats-menu');
+  if (cMenu) {
+    const items = Object.entries(CATS).slice(0,20).map(([id,c]) => {
+      const ico = c.img ? `<img src="${c.img}" style="width:24px;height:24px;object-fit:cover;border-radius:3px">` : `<span style="font-size:16px">${c.icon||'💄'}</span>`;
+      return `<div class="nav-drop-item" onclick="selectCat('${id}');closeNavDropdowns()">${ico}${c.name}</div>`;
+    }).join('');
+    cMenu.innerHTML = cMenu.firstElementChild.outerHTML + items;
+  }
+}
+
+function closeNavDropdowns() {
+  document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.style.display = 'none');
+  setTimeout(() => document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.style.display = ''), 300);
+}
+
+function goHome() {
+  document.getElementById('brands-section').style.display = 'block';
+  document.getElementById('cats-section').style.display = 'none';
+  document.getElementById('prods-section').style.display = 'none';
+  document.getElementById('search-results-section').style.display = 'none';
+  selBrand = null; selCat = null;
+  renderBrands();
+  window.scrollTo({top:0, behavior:'smooth'});
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('on'));
+  const h = document.getElementById('mob-home'); if(h) h.classList.add('on');
+}
+
+function goSection(sec) {
+  if (sec === 'promos') {
+    const el = document.getElementById('promo-section');
+    if (el) el.scrollIntoView({behavior:'smooth'});
+  } else if (sec === 'blog') {
+    const el = document.getElementById('blog-section');
+    if (el) el.scrollIntoView({behavior:'smooth'});
+  }
+}
+
+// Mobile nav
+function mobNav(sec, btn) {
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  if (sec === 'home')   { goHome(); }
+  else if (sec === 'search') {
+    const inp = document.getElementById('srch-inp');
+    if (inp) { inp.focus(); inp.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }
+  else if (sec === 'cart')   { openCart(); }
+  else if (sec === 'blog')   { goSection('blog'); }
+  else if (sec === 'brands') {
+    goHome();
+    setTimeout(() => scrollToSection('brands-section'), 300);
+  }
+}
+
+// Update cart badge in mobile nav
+function updMobBadge() {
+  const badge = document.getElementById('mob-badge-txt');
+  if (!badge) return;
+  const total = cart.reduce((s,i)=>s+i.qty,0);
+  if (total > 0) { badge.textContent = total > 9 ? '9+' : total; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
 
 </script>
 
