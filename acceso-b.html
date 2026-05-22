@@ -2328,10 +2328,23 @@ function getPromos() {
 }
 function savePromos(data) { localStorage.setItem(PROMO_KEY, JSON.stringify(data)); }
 
+  if (fbReady && db) {
+    db.collection('settings').doc('promos').set({list: data})
+      .catch(e => console.warn('[BAILY] Promos sync error:', e.message));
+  }
+}
 function getBlogPosts() {
   try { const s = localStorage.getItem(BLOG_KEY); return s ? JSON.parse(s) : getDefaultBlog(); } catch(e) { return getDefaultBlog(); }
 }
-function saveBlogPosts(data) { localStorage.setItem(BLOG_KEY, JSON.stringify(data)); }
+function saveBlogPosts(data) {
+  localStorage.setItem(BLOG_KEY, JSON.stringify(data));
+  // Auto-sync blog to Firestore
+  if (fbReady && db) {
+    db.collection('settings').doc('blog').set({list: data})
+      .then(() => console.log('[BAILY] Blog synced to Firestore'))
+      .catch(e => console.warn('[BAILY] Blog sync error:', e.message));
+  }
+}
 
 // ── PROMOS ──
 function renderPromos() {
