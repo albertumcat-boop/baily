@@ -2654,44 +2654,65 @@ function handleMultiImg(input) {
   const remaining = 5 - current.length;
   if (remaining <= 0) { toast('Ya tienes 5 fotos (máximo)', 'err'); return; }
   const toProcess = files.slice(0, remaining);
-  let done = 0;
+  let done = 0, cloudOk = 0, cloudFail = 0;
 
-  // Block save button while uploading
   window._uploadingImgs = true;
   const saveBtn = document.querySelector('#pm-bg .btn.bp');
-  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo fotos...'; }
-  toast('⏳ Subiendo ' + toProcess.length + ' foto(s) a Cloudinary...', '');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo 0/' + toProcess.length + '...'; }
 
-  toProcess.forEach(file => {
+  toProcess.forEach((file, idx) => {
     compressImage(file, async (dataUrl, kb) => {
-      const prodName = (document.getElementById('pm-nm').value || 'prod').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      try {
-        const finalUrl = await uploadToStorage(dataUrl, prodName);
-        current.push(finalUrl);
-      } catch(e) {
-        current.push(dataUrl); // fallback to base64
+      const prodName = (document.getElementById('pm-nm').value || 'prod').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+      let finalUrl = dataUrl;
+      let uploadedToCloud = false;
+
+      const cfg = getCLD();
+      if (cfg && cfg.cloud && cfg.preset) {
+        try {
+          finalUrl = await uploadToCloudinary(dataUrl, cfg.cloud, cfg.preset);
+          uploadedToCloud = true;
+          cloudOk++;
+        } catch(e) {
+          cloudFail++;
+          console.error('[BAILY] Cloudinary upload failed for file', idx, ':', e.message);
+          // Keep base64 as fallback — will be visible locally
+          finalUrl = dataUrl;
+        }
       }
+
+      current.push(finalUrl);
       done++;
-      // Update progress
+
       const saveBtn2 = document.querySelector('#pm-bg .btn.bp');
       if (saveBtn2) saveBtn2.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo ' + done + '/' + toProcess.length + '...';
 
       if (done === toProcess.length) {
         document.getElementById('pm-imgs-data').value = JSON.stringify(current);
         renderImgPreviews(current);
-        // Re-enable save button
         window._uploadingImgs = false;
+
         if (saveBtn2) {
           saveBtn2.disabled = false;
           saveBtn2.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar producto';
         }
-        const isCloud = current.some(u => u.startsWith('http'));
-        toast(done + ' foto(s) listas · ' + (isCloud ? '☁️ en Cloudinary' : 'comprimidas'), 'ok');
+
+        if (cloudFail > 0 && cloudOk === 0) {
+          // All failed - show error
+          toast('⚠️ Las fotos NO se subieron a Cloudinary. Verifica la conexión e intenta de nuevo.', 'err');
+        } else if (cloudFail > 0) {
+          toast(cloudOk + ' foto(s) en Cloudinary ✓ · ' + cloudFail + ' fallaron (solo locales)', 'ok');
+        } else if (cloudOk > 0) {
+          toast(cloudOk + ' foto(s) subidas a Cloudinary ☁️ ✓', 'ok');
+        } else {
+          toast(done + ' foto(s) comprimidas (sin Cloudinary - configúralo en Firebase/Nube)', 'ok');
+        }
       }
     });
   });
   input.value = '';
 }
+
+
 
 
 function renderImgPreviews(imgs) {
@@ -3149,19 +3170,30 @@ async function uploadToStorage(base64DataUrl, filename) {
 async function uploadToCloudinary(base64DataUrl, cloudName, uploadPreset) {
   const res  = await fetch(base64DataUrl);
   const blob = await res.blob();
+  const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+  console.log('[BAILY] Uploading to Cloudinary:', sizeMB + 'MB');
+
   const form = new FormData();
   form.append('file', blob);
   form.append('upload_preset', uploadPreset);
   form.append('folder', 'baily-store');
+
   const r = await fetch('https://api.cloudinary.com/v1_1/' + cloudName + '/image/upload', {
     method: 'POST', body: form
   });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+
+  if (!r.ok) {
+    const errText = await r.text().catch(() => 'HTTP ' + r.status);
+    throw new Error('HTTP ' + r.status + ': ' + errText.substring(0, 100));
+  }
+
   const data = await r.json();
   if (data.error) throw new Error(data.error.message);
+
   console.log('[BAILY] Cloudinary OK:', data.secure_url.slice(0,60));
   return data.secure_url;
 }
+
 
 // Fallback: compress to ~60KB for Firestore
 async function compressToFirestoreSize(base64DataUrl) {
