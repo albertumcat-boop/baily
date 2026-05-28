@@ -1412,6 +1412,13 @@ function saveP() {
     toast('⏳ Espera — las fotos aún se están subiendo...', 'err');
     return;
   }
+  // Warn if images are base64 (won't sync to other devices)
+  const _imgs = JSON.parse(document.getElementById('pm-imgs-data').value || '[]');
+  const _hasBase64 = _imgs.some(u => u && u.startsWith('data:'));
+  if (_hasBase64) {
+    console.warn('[BAILY] WARNING: Product has base64 images - will not appear on other devices');
+    toast('⚠️ Foto guardada solo en este dispositivo (Cloudinary no conectado)', 'err');
+  }
   const nm    = document.getElementById('pm-nm').value.trim();
   const brand = document.getElementById('pm-br').value;
   const catId = document.getElementById('pm-cat').value;
@@ -2918,7 +2925,10 @@ async function syncToCloud(type) {
 
     } else if (type === 'settings') {
       const cfg = JSON.parse(localStorage.getItem(CK) || '{}');
-      await db.collection('settings').doc('general').set(cfg);
+      // Never save tasaBCV to Firestore — it must always come from live API
+      const cfgToSave = {...cfg};
+      delete cfgToSave.tasaBCV;
+      await db.collection('settings').doc('general').set(cfgToSave);
       fbLog('✅ Configuración subida');
 
     } else if (type === 'promos') {
