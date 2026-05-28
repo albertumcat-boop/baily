@@ -713,6 +713,16 @@ const PROD_DEFAULT = [{"id":"p0001","name":"Oliva","brand":"NOVEX","brandId":"no
 const CFG_DEFAULT = {tasaBCV:0,descPct:35,descActive:false,deliveryCost:3,freeThreshold:30,wa:'+584242655274',deliveryCenter:[10.4806,-66.9036],deliveryRadius:15};
 
 let CFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
+// ALWAYS clear stored tasa — must come from live API only
+CFG.tasaBCV = 0;
+// Also clear from localStorage so it never loads stale value
+try {
+  const _storedCfg = JSON.parse(localStorage.getItem(CK)||'{}');
+  if (_storedCfg.tasaBCV) {
+    delete _storedCfg.tasaBCV;
+    localStorage.setItem(CK, JSON.stringify(_storedCfg));
+  }
+} catch(e) {}
 
 async function loadCFGFromFirestore() {
   if (!_storeDb) return;
@@ -820,8 +830,9 @@ async function fetchTasaBCV(){
       }
     }catch(e){ console.log('API failed:', url, e.message); }
   }
-  // Fallback: show stored rate
+  // API failed - show error message
   const el = document.getElementById('tasa-display');
+  if (el && el.textContent === 'cargando...') el.textContent = 'no disponible';
 }
 
 fetchTasaBCV();
