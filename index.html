@@ -730,15 +730,19 @@ async function loadCFGFromFirestore() {
     const doc = await _storeDb.collection('settings').doc('general').get();
     if (doc.exists) {
       const saved = doc.data();
+      // NEVER apply tasaBCV from Firestore — live API only
+      delete saved.tasaBCV;
       Object.assign(CFG, saved);
-      localStorage.setItem(CK, JSON.stringify(CFG));
-      // Update BCV display
-      const el = document.getElementById('tasa-display');
-      if (el && CFG.tasaBCV) el.textContent = 'Bs. ' + CFG.tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2}) + ' / $';
+      CFG.tasaBCV = 0; // ensure it stays 0 until API sets it
+      // Save to localStorage WITHOUT tasaBCV
+      const toStore = {...CFG};
+      delete toStore.tasaBCV;
+      localStorage.setItem(CK, JSON.stringify(toStore));
       console.log('[BAILY Store] Config cargada desde Firestore');
     }
   } catch(e) { console.log('[BAILY Store] Error cargando config:', e.message); }
 }
+
 
 // Firebase config for store (read-only access to products)
 var _storeDb = null;
@@ -1631,9 +1635,12 @@ renderBlog();
 setTimeout(async () => {
   await loadCFGFromFirestore();
   await loadProdsFromFirestore();
+  await loadBlogFromFirestore();
+  await loadPromosFromFirestore();
   renderPromoSlider();
   renderBlog();
-
+  // Run fetchTasaBCV LAST so live rate always wins over anything from Firestore
+  fetchTasaBCV();
 }, 800);
 
 
