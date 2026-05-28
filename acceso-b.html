@@ -1470,7 +1470,16 @@ function saveP() {
 function delP(id) {
   if (!confirm('¿Eliminar este producto del inventario?')) return;
   PRODUCTS = PRODUCTS.filter(x => x.id !== id);
-  saveProds(); renderProds(); toast('Producto eliminado', 'ok');
+  saveProds();
+  renderProds();
+  // Delete from Firestore immediately
+  if (fbReady && db) {
+    db.collection('products').doc(id).delete()
+      .then(() => toast('Producto eliminado ✓', 'ok'))
+      .catch(e => toast('Eliminado localmente · Error nube: ' + e.message, 'ok'));
+  } else {
+    toast('Producto eliminado', 'ok');
+  }
 }
 
 function closePM() { document.getElementById('pm-bg').classList.remove('on'); }
@@ -2959,18 +2968,20 @@ async function syncFromCloud(type) {
     if (type === 'products') {
       const snap = await db.collection('products').get();
       if (snap.empty) { fbLog('⚠️ No hay productos en la nube'); return; }
-      // Merge cloud data with local images
+      // Cloud is source of truth — use cloud products directly
+      // Only preserve local images if cloud doesn't have them
       const cloudMap = {};
       snap.docs.forEach(d => { cloudMap[d.id] = {id: d.id, ...d.data()}; });
       const merged = Object.values(cloudMap).map(cp => {
         const local = PRODUCTS.find(p => p.id === cp.id);
-        // Keep cloud image if it's a URL (Firebase/CDN), otherwise use local base64
         if (local) {
-          if (!cp.img || cp.img === '' || cp._imgsTooLarge) cp.img = local.img || '';
-          if (!cp.imgs || !cp.imgs.length || cp._imgsTooLarge) cp.imgs = local.imgs || [];
+          // Only use local images if cloud has none (and they're base64)
+          if ((!cp.img || cp.img === '') && local.img) cp.img = local.img;
+          if ((!cp.imgs || !cp.imgs.length) && local.imgs && local.imgs.length) cp.imgs = local.imgs;
         }
         return cp;
       });
+      // Note: products NOT in cloud are considered deleted — don't restore them
       PRODUCTS = merged;
       saveProds();
       fbLog(`✅ ${PRODUCTS.length} productos descargados`);
