@@ -972,7 +972,13 @@ function pCard(p){
 function openM(id){
   const p=PRODUCTS.find(x=>x.id===id);if(!p)return;
   curP=p;curQty=1;
-  const out=(+p.stock||0)<=0,tasa=CFG.tasaBCV??47.15;
+  const out=(+p.stock||0)<=0&&!(Array.isArray(p.tones)&&p.tones.length);
+  // Always use live BCV rate from display element
+  const _tEl=document.getElementById('tasa-display');
+  const _tRaw=_tEl?_tEl.textContent.replace(/[^0-9,.]/g,''):'0';
+  const tasa=(_tRaw.indexOf(',')>-1)
+    ?parseFloat(_tRaw.replace(/\./g,'').replace(',','.'))
+    :parseFloat(_tRaw)||CFG.tasaBCV||47.15;
   // Build gallery from imgs array (multi-image) or single img field
   const _imgs = Array.isArray(p.imgs) && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
   const _icon = CATS[p.catId]?.icon || '💄';
@@ -1336,7 +1342,7 @@ function renderCart(){
     <!-- TOTALES -->
     <div class="c-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
     ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct??35}%)</span><span>−$${desc.toFixed(2)}</span></div>`:''}
-    <div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>
+    ${selShipMode!=='retiro'?`<div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>`:''}
     
     <div class="c-row tot">
       <span>Total</span>
