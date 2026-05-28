@@ -911,11 +911,16 @@ function renderCats(brand){
 function selectCat(cid){
   selCat=cid;selSubcat=null;
   const cat=CATS[cid]||{name:cid};
-  document.getElementById('arr2').style.display='';
-  document.getElementById('step-cat').style.display='';
-  document.getElementById('step-cat').classList.add('done');
-  document.getElementById('step-cat-txt').textContent=cat.name;
+  // Hide all sections, show products
+  document.getElementById('brands-section').style.display='none';
   document.getElementById('cats-section').style.display='none';
+  document.getElementById('search-results-section').style.display='none';
+  if(document.getElementById('arr2')) document.getElementById('arr2').style.display='';
+  if(document.getElementById('step-cat')){
+    document.getElementById('step-cat').style.display='';
+    document.getElementById('step-cat').classList.add('done');
+    document.getElementById('step-cat-txt').textContent=cat.name;
+  }
   renderProds();
   document.getElementById('prods-section').style.display='block';
   document.getElementById('prods-section').classList.add('fade-in');
@@ -923,7 +928,9 @@ function selectCat(cid){
 }
 
 function renderProds(){
-  let list=PRODUCTS.filter(p=>p.brand===selBrand&&p.catId===selCat);
+  let list = selBrand
+    ? PRODUCTS.filter(p=>p.brand===selBrand && p.catId===selCat)
+    : PRODUCTS.filter(p=>p.catId===selCat);
   const subcats=[...new Set(list.map(p=>p.category).filter(Boolean))];
   if(subcats.length>1){
     document.getElementById('subcat-row').innerHTML=
@@ -932,7 +939,7 @@ function renderProds(){
   }else{document.getElementById('subcat-row').innerHTML='';}
   if(selSubcat) list=list.filter(p=>p.category===selSubcat);
   const cat=CATS[selCat]||{name:selCat};
-  document.getElementById('prods-title').textContent=`${selBrand} · ${cat.name}`;
+  document.getElementById('prods-title').textContent = selBrand ? selBrand+' · '+cat.name : cat.name;
   document.getElementById('prods-cnt').textContent=`${list.length} producto${list.length!==1?'s':''}`;
   document.getElementById('prods-grid').innerHTML=list.map(pCard).join('');
 }
@@ -941,7 +948,9 @@ function filterSub(s,btn){
   selSubcat=s;
   document.querySelectorAll('.sub-chip').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  let list=PRODUCTS.filter(p=>p.brand===selBrand&&p.catId===selCat);
+  let list = selBrand
+    ? PRODUCTS.filter(p=>p.brand===selBrand && p.catId===selCat)
+    : PRODUCTS.filter(p=>p.catId===selCat);
   if(s) list=list.filter(p=>p.category===s);
   document.getElementById('prods-grid').innerHTML=list.map(pCard).join('');
 }
