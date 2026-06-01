@@ -46,14 +46,13 @@ h1,h2,h3{font-family:Georgia,serif}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* HERO */
-.hero{background:linear-gradient(140deg,var(--md) 0%,var(--mauve) 55%,var(--mm) 100%);padding:50px 20px;text-align:center;color:#fff;position:relative;overflow:hidden}
-.hero::before,.hero::after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.05)}
-.hero::before{width:280px;height:280px;top:-80px;right:-60px}
-.hero::after{width:200px;height:200px;bottom:-60px;left:-40px}
-.hero-inner{max-width:620px;margin:0 auto;position:relative;z-index:1}
-.hero h1{font-size:clamp(36px,6vw,58px);font-weight:400;letter-spacing:6px;margin-bottom:10px}
+.hero{background:linear-gradient(140deg,var(--md) 0%,var(--mauve) 55%,var(--mm) 100%);text-align:center;color:#fff;position:relative;overflow:hidden;padding:0}
+.hero-canvas{display:block;width:100%;height:320px}
+@media(max-width:600px){.hero-canvas{height:240px}}
+.hero-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+.hero h1{font-size:clamp(36px,6vw,58px);font-weight:400;letter-spacing:6px;margin-bottom:10px;text-shadow:0 2px 18px rgba(44,36,32,.35)}
 .hero p{font-size:15px;opacity:.88;margin-bottom:26px;line-height:1.6;font-family:system-ui,sans-serif}
-.hero-cta{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);color:#fff;padding:12px 28px;border-radius:var(--rl);font-family:Georgia,serif;font-size:15px;letter-spacing:.5px;cursor:pointer;transition:all .2s}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.5);color:#fff;padding:12px 28px;border-radius:var(--rl);font-family:Georgia,serif;font-size:15px;letter-spacing:.5px;cursor:pointer;transition:all .2s;pointer-events:all}
 .hero-cta:hover{background:#fff;color:var(--md)}
 
 /* SHOP */
@@ -397,10 +396,6 @@ footer{background:var(--md);color:rgba(255,255,255,.85);padding:38px 20px 18px;m
 .tone-btn.sold{background:var(--cream2);color:var(--tl);cursor:not-allowed;border-style:dashed}
 .tone-info{font-size:11px;color:var(--tl);margin-top:8px}
 
-var _selTone=null;
-
-
-
 /* ── MOBILE BOTTOM NAV ── */
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--white);border-top:var(--border);z-index:300;align-items:center;justify-content:space-around;box-shadow:0 -2px 12px rgba(44,36,32,.08)}
 .mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;height:100%;background:none;border:none;cursor:pointer;color:var(--tl);font-family:inherit;font-size:9px;font-weight:500;transition:color .2s;-webkit-tap-highlight-color:transparent;padding:6px 0}
@@ -517,7 +512,8 @@ var _selTone=null;
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-inner">
+  <canvas class="hero-canvas" id="hero-canvas"></canvas>
+  <div class="hero-overlay">
     <h1>BAILY</h1>
     <p>Maquillaje & productos de belleza premium · Caracas, Venezuela</p>
     <button class="hero-cta" onclick="document.getElementById('shop-section').scrollIntoView({behavior:'smooth'})">
@@ -525,6 +521,459 @@ var _selTone=null;
     </button>
   </div>
 </section>
+<script>
+(function(){
+  var canvas = document.getElementById('hero-canvas');
+  var ctx    = canvas.getContext('2d');
+  var raf    = null;
+  var DPR    = window.devicePixelRatio || 1;
+
+  function resize(){
+    canvas.width  = canvas.offsetWidth  * DPR;
+    canvas.height = canvas.offsetHeight * DPR;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(DPR, DPR);
+  }
+  window.addEventListener('resize', function(){ resize(); schedReset(); });
+  resize();
+
+  var W = function(){ return canvas.offsetWidth; };
+  var H = function(){ return canvas.offsetHeight; };
+
+  /* ── CAMERA ── */
+  var cam = { x:0, y:0, zoom:1, tx:0, ty:0, tz:1 };
+
+  /* ── SCREEN SHAKE ── */
+  var shk = { i:0, x:0, y:0 };
+
+  /* ── EFFECTS ── */
+  var shockwaves = [];
+  var particles  = [];
+  var flash      = 0;
+
+  /* ── LIPSTICK PALETTES (referencia foto: borgonha oscuro + mauve rosado) ── */
+  var PAL_A = { tip:'#7B3348', tipHi:'#A04F65', tipSh:'#551828' };
+  var PAL_B = { tip:'#A87070', tipHi:'#C49090', tipSh:'#7A4F50' };
+
+  /* ── STATE ── */
+  // states: 'fly' | 'zoom_in' | 'impact' | 'zoom_out' | 'done'
+  var state = 'fly', stateT = 0;
+  var lipA, lipB, resetTimer = null;
+  var contactX = 0, contactY = 0; // punto real de contacto
+  var crushT = 0;                  // 0→1→0 durante el impacto
+
+  function shadeHex(hex, amt){
+    var n=parseInt(hex.replace('#',''),16);
+    var r=Math.max(0,Math.min(255,((n>>16)&255)+amt));
+    var g=Math.max(0,Math.min(255,((n>>8)&255)+amt));
+    var b=Math.max(0,Math.min(255,(n&255)+amt));
+    return '#'+(r<<16|g<<8|b).toString(16).padStart(6,'0');
+  }
+
+  /* ── DRAW LIPSTICK — crush: 0=normal 1=máx deformación ── */
+  function drawLip(x, y, angle, scale, pal, alpha, crush){
+    crush = Math.max(0, Math.min(1, crush||0));
+    ctx.save();
+    ctx.globalAlpha = (alpha === undefined ? 1 : alpha);
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(scale, scale);
+
+    var tw=17, th=50, col=10;
+    /* La bala apunta hacia -Y (arriba en local space).
+       Con angle=+π/2 el labial A apunta a la derecha (→).
+       Con angle=-π/2 el labial B apunta a la izquierda (←). */
+    var bh = 26;                       /* alto bala normal        */
+    var cBH = bh*(1 - crush*0.52);     /* bala se acorta al crush */
+    var bulge = crush*12;              /* abombamiento lateral    */
+
+    /* SOMBRA */
+    ctx.shadowColor='rgba(0,0,0,0.5)';
+    ctx.shadowBlur=16; ctx.shadowOffsetX=2; ctx.shadowOffsetY=5;
+
+    /* TUBO NEGRO MATE */
+    ctx.beginPath();
+    ctx.roundRect(-tw/2, col, tw, th, [0,0,5,5]);
+    var tube=ctx.createLinearGradient(-tw/2,0,tw/2,0);
+    tube.addColorStop(0,'#111'); tube.addColorStop(0.18,'#2b2b2b');
+    tube.addColorStop(0.5,'#1e1e1e'); tube.addColorStop(0.82,'#252525');
+    tube.addColorStop(1,'#0d0d0d');
+    ctx.fillStyle=tube; ctx.fill();
+    ctx.shadowColor='transparent';
+
+    /* arista lateral del tubo */
+    ctx.beginPath();
+    ctx.moveTo(-tw/2+1.5,col+4); ctx.lineTo(-tw/2+1.5,col+th-8);
+    ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1.5; ctx.stroke();
+
+    /* COLLAR DORADO */
+    ctx.beginPath();
+    ctx.rect(-tw/2-1,0,tw+2,col);
+    var gold=ctx.createLinearGradient(0,0,0,col);
+    gold.addColorStop(0,'#f0d48a'); gold.addColorStop(0.15,'#e8c870');
+    gold.addColorStop(0.45,'#C9A96E'); gold.addColorStop(0.75,'#a07840');
+    gold.addColorStop(1,'#7a5828');
+    ctx.fillStyle=gold; ctx.fill();
+    [2.2,4.5,7.0].forEach(function(ly){
+      ctx.beginPath(); ctx.moveTo(-tw/2,ly); ctx.lineTo(tw/2,ly);
+      ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.6; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-tw/2,ly+0.7); ctx.lineTo(tw/2,ly+0.7);
+      ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=0.4; ctx.stroke();
+    });
+    ctx.beginPath(); ctx.rect(-tw/2,0,tw,2.5);
+    ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fill();
+
+    /* BALA con deformación por crush */
+    var bx=-tw/2, bx2=tw/2, by=0;
+    /* punta diagonal: en normal está arriba-izquierda;
+       con crush se aplana y se ensancha */
+    var tipX = bx+8*(1-crush*0.3);   /* punta se mueve menos hacia la izq */
+    var tipY = -cBH;                 /* punta se acerca al collar          */
+    /* el lado corto derecho también se acorta */
+    var rTopY = -(cBH*0.55);
+
+    ctx.beginPath();
+    if(crush < 0.02){
+      /* forma normal: líneas rectas */
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx2, by);
+      ctx.lineTo(bx2, rTopY);
+      ctx.lineTo(tipX, tipY);
+      ctx.closePath();
+    } else {
+      /* forma aplastada: bezier cuádraticas que abomban los lados */
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx2, by);
+      /* lado derecho se abomba a la derecha */
+      ctx.quadraticCurveTo(bx2+bulge, rTopY*0.5, bx2+bulge*0.4, rTopY);
+      /* filo de la punta (ahora más plano) */
+      ctx.lineTo(tipX-bulge*0.3, tipY);
+      /* lado izquierdo se abomba a la izquierda */
+      ctx.quadraticCurveTo(bx-bulge*0.9, rTopY*0.5, bx, by);
+      ctx.closePath();
+    }
+
+    /* gradiente volumétrico mate */
+    var lipG=ctx.createLinearGradient(bx,tipY,bx2,by);
+    lipG.addColorStop(0, pal.tipHi);
+    lipG.addColorStop(0.28, pal.tip);
+    lipG.addColorStop(0.65, pal.tipSh);
+    lipG.addColorStop(1, shadeHex(pal.tipSh,-12));
+    ctx.fillStyle=lipG; ctx.fill();
+
+    /* luz lateral difusa (cara inclinada recibe luz) */
+    var sideL=ctx.createLinearGradient(bx,0,bx+7,0);
+    sideL.addColorStop(0,'rgba(255,255,255,0.14)');
+    sideL.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath();
+    if(crush<0.02){
+      ctx.moveTo(bx,by); ctx.lineTo(bx2,by);
+      ctx.lineTo(bx2,rTopY); ctx.lineTo(tipX,tipY); ctx.closePath();
+    } else {
+      ctx.moveTo(bx,by); ctx.lineTo(bx2,by);
+      ctx.quadraticCurveTo(bx2+bulge,rTopY*0.5,bx2+bulge*0.4,rTopY);
+      ctx.lineTo(tipX-bulge*0.3,tipY);
+      ctx.quadraticCurveTo(bx-bulge*0.9,rTopY*0.5,bx,by);
+      ctx.closePath();
+    }
+    ctx.fillStyle=sideL; ctx.fill();
+
+    /* micro-brillo en el filo de la punta */
+    if(crush < 0.5){
+      ctx.beginPath();
+      ctx.moveTo(tipX-1,tipY+1); ctx.lineTo(tipX+4,tipY+4);
+      ctx.strokeStyle='rgba(255,255,255,0.32)';
+      ctx.lineWidth=1.2; ctx.lineCap='round'; ctx.stroke();
+    }
+
+    /* línea separación bala/collar */
+    ctx.beginPath();
+    ctx.moveTo(bx,by); ctx.lineTo(bx2,by);
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1; ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ── PIGMENTO APLASTADO entre las dos balas ── */
+  function drawPigmentBlob(cx, cy, crush){
+    if(crush<=0.01) return;
+    var spread = crush * 20;
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    /* mancha principal: blob orgánico elongado perpendicular a la colisión
+       (la colisión es horizontal, así que el blob se extiende en Y) */
+    var rX = spread*0.55;   /* radio horizontal pequeño (eje de colisión) */
+    var rY = spread*1.4;    /* radio vertical grande  (se escurre arriba y abajo) */
+
+    /* gradiente radial con mezcla de los dos colores */
+    var bg = ctx.createRadialGradient(0,0,0, 0,0,rY*1.1);
+    bg.addColorStop(0,   'rgba(155,80,100,0.95)');  /* mezcla borgonha+mauve */
+    bg.addColorStop(0.4, 'rgba(130,65,85,0.80)');
+    bg.addColorStop(0.75,'rgba(110,50,70,0.45)');
+    bg.addColorStop(1,   'rgba(90,40,60,0)');
+
+    /* forma de blob con bezier irregulares */
+    ctx.beginPath();
+    ctx.moveTo(rX, 0);
+    ctx.bezierCurveTo( rX,    -rY*0.6,  rX*0.5, -rY,    0,      -rY);
+    ctx.bezierCurveTo(-rX*0.5,-rY,     -rX,    -rY*0.6,-rX,      0);
+    ctx.bezierCurveTo(-rX,    rY*0.55,  -rX*0.4, rY*0.9, 0,      rY);
+    ctx.bezierCurveTo( rX*0.4, rY*0.9,   rX,    rY*0.55, rX,      0);
+    ctx.closePath();
+    ctx.fillStyle=bg;
+    ctx.fill();
+
+    /* venas de pigmento que se escurren */
+    if(crush>0.3){
+      var dribbles=[
+        {ox:0,oy:-rY,dx:rX*0.4,dy:-rY*0.5},
+        {ox:0,oy: rY,dx:-rX*0.3,dy:rY*0.4},
+        {ox:rX*0.5,oy:-rY*0.5,dx:rX*0.7,dy:-rY*0.7}
+      ];
+      dribbles.forEach(function(d){
+        var op=(crush-0.3)/0.7;
+        ctx.beginPath();
+        ctx.moveTo(d.ox,d.oy);
+        ctx.quadraticCurveTo(d.dx*0.5,d.dy*0.5,d.dx,d.dy);
+        ctx.strokeStyle='rgba(120,55,75,'+( op*0.6).toFixed(2)+')';
+        ctx.lineWidth=3*crush; ctx.lineCap='round'; ctx.stroke();
+      });
+    }
+
+    ctx.restore();
+  }
+
+  /* ── SPAWN IMPACT EFFECTS ── */
+  function spawnImpact(x, y){
+    /* two shockwave rings */
+    shockwaves.push({x,y,r:0,maxR:Math.min(W(),H())*0.55,age:0,maxAge:45,col:'rgba(255,255,255,'});
+    shockwaves.push({x,y,r:0,maxR:Math.min(W(),H())*0.35,age:8,maxAge:40,col:'rgba(201,169,110,'});
+
+    /* pigment particles — colores del pigmento cremoso al chocar */
+    var colors=[PAL_A.tip, PAL_A.tipHi, PAL_B.tip, PAL_B.tipHi,
+                '#C9A96E','#E8D098','#ffffff',
+                PAL_A.tipSh, PAL_B.tipSh];
+    for(var i=0;i<70;i++){
+      var ang=Math.random()*Math.PI*2;
+      var spd=2+Math.random()*6;
+      particles.push({
+        x,y,
+        vx:Math.cos(ang)*spd,
+        vy:Math.sin(ang)*spd - 1.5,
+        r:1.5+Math.random()*4.5,
+        life:1,
+        decay:0.015+Math.random()*0.022,
+        col:colors[Math.floor(Math.random()*colors.length)],
+        grav:0.13+Math.random()*0.08
+      });
+    }
+
+    flash = 0.55;   /* flash más tenue: queremos ver la deformación */
+    shk.i = 9;
+  }
+
+  /* ── INIT ── */
+  function makeLips(){
+    var cy = H()*0.5 + (Math.random()-0.5)*H()*0.2;
+    /* ángulos: tip apunta en la dirección de vuelo
+       lipA viene de la izquierda → tip apunta a la derecha (+π/2)
+       lipB viene de la derecha  → tip apunta a la izquierda (-π/2) */
+    lipA = {
+      x:-80, y:cy,
+      vx:1.1+Math.random()*0.25, vy:(Math.random()-0.5)*0.25,
+      angle: Math.PI/2,
+      trail:[], pal:PAL_A, scale:1.15, crush:0
+    };
+    lipB = {
+      x:W()+80, y:cy+(Math.random()-0.5)*20,
+      vx:-(1.1+Math.random()*0.25), vy:(Math.random()-0.5)*0.25,
+      angle:-Math.PI/2,
+      trail:[], pal:PAL_B, scale:1.15, crush:0
+    };
+  }
+
+  function schedReset(){
+    if(resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(function(){
+      state='fly'; stateT=0;
+      cam.tx=W()/2; cam.ty=H()/2; cam.tz=1;
+      cam.x=W()/2;  cam.y=H()/2;  cam.zoom=1;
+      shk.i=0; shockwaves=[]; particles=[]; flash=0;
+      makeLips();
+      if(!raf) raf=requestAnimationFrame(tick);
+    }, 520);
+  }
+
+  /* ── MAIN TICK ── */
+  function tick(){
+    var w=W(), h=H();
+
+    /* smooth camera */
+    cam.x    += (cam.tx   - cam.x)    * 0.09;
+    cam.y    += (cam.ty   - cam.y)    * 0.09;
+    cam.zoom += (cam.tz   - cam.zoom) * 0.075;
+
+    /* shake */
+    if(shk.i > 0.4){
+      shk.x=(Math.random()-0.5)*shk.i*2;
+      shk.y=(Math.random()-0.5)*shk.i*2;
+      shk.i*=0.80;
+    } else { shk.x=0; shk.y=0; shk.i=0; }
+
+    /* ── state machine ── */
+    if(state==='fly'){
+      lipA.x+=lipA.vx; lipA.y+=lipA.vy;
+      lipB.x+=lipB.vx; lipB.y+=lipB.vy;
+      pushTrail(lipA); pushTrail(lipB);
+
+      var dist=Math.hypot(lipB.x-lipA.x, lipB.y-lipA.y);
+      var mx=(lipA.x+lipB.x)/2, my=(lipA.y+lipB.y)/2;
+
+      if(dist<180){
+        cam.tx=mx; cam.ty=my; cam.tz=2.5;
+        state='zoom_in';
+      }
+      if(lipA.x>w+100||lipB.x<-100) schedReset();
+    }
+
+    else if(state==='zoom_in'){
+      lipA.x+=lipA.vx; lipA.y+=lipA.vy;
+      lipB.x+=lipB.vx; lipB.y+=lipB.vy;
+      pushTrail(lipA); pushTrail(lipB);
+
+      var mx2=(lipA.x+lipB.x)/2, my2=(lipA.y+lipB.y)/2;
+      cam.tx=mx2; cam.ty=my2;
+
+      var dist2=Math.hypot(lipB.x-lipA.x, lipB.y-lipA.y);
+      if(dist2<=40){
+        /* guardamos el punto exacto de contacto entre las dos puntas */
+        contactX = (lipA.x+lipB.x)/2;
+        contactY = (lipA.y+lipB.y)/2;
+        spawnImpact(contactX, contactY);
+        /* los labiales se detienen casi en seco */
+        lipA.vx=0; lipA.vy=0;
+        lipB.vx=0; lipB.vy=0;
+        crushT=0;
+        state='impact'; stateT=0;
+        /* zoom extra durante la deformación */
+        cam.tz=3.2;
+      }
+    }
+
+    else if(state==='impact'){
+      stateT++;
+      /* crushT: sube rápido (0→1 en 18f) y baja lento (1→0 en 30f) */
+      if(stateT<=18)      crushT = stateT/18;
+      else if(stateT<=48) crushT = 1 - (stateT-18)/30;
+      else                crushT = 0;
+      lipA.crush = crushT;
+      lipB.crush = crushT;
+
+      if(stateT>=60){
+        cam.tx=w/2; cam.ty=h/2; cam.tz=1;
+        lipA.vx=-1.1; lipA.vy=(Math.random()-0.5)*0.3;
+        lipB.vx= 1.1; lipB.vy=(Math.random()-0.5)*0.3;
+        lipA.crush=0; lipB.crush=0; crushT=0;
+        state='zoom_out'; stateT=0;
+      }
+    }
+
+    else if(state==='zoom_out'){
+      lipA.x+=lipA.vx; lipA.y+=lipA.vy;
+      lipB.x+=lipB.vx; lipB.y+=lipB.vy;
+      stateT++;
+      if(stateT>70||lipA.x<-100||lipB.x>w+100){
+        state='done';
+        schedReset();
+      }
+    }
+
+    /* ── RENDER ── */
+    ctx.clearRect(0,0,w,h);
+
+    ctx.save();
+    ctx.translate(w/2+shk.x, h/2+shk.y);
+    ctx.scale(cam.zoom, cam.zoom);
+    ctx.translate(-cam.x, -cam.y);
+
+    /* trails (sin crush en el trail) */
+    if(lipA) lipA.trail.forEach(function(t,i){
+      drawLip(t.x,t.y,t.a,lipA.scale,lipA.pal,(i/lipA.trail.length)*0.28,0);
+    });
+    if(lipB) lipB.trail.forEach(function(t,i){
+      drawLip(t.x,t.y,t.a,lipB.scale,lipB.pal,(i/lipB.trail.length)*0.28,0);
+    });
+
+    /* shockwaves */
+    shockwaves = shockwaves.filter(function(sw){
+      if(sw.age<0){sw.age++;return true;}
+      sw.r  += (sw.maxR-sw.r)*0.13;
+      sw.age++;
+      if(sw.age>=sw.maxAge) return false;
+      var op=Math.max(0,1-sw.age/sw.maxAge);
+      ctx.beginPath();
+      ctx.arc(sw.x,sw.y,sw.r,0,Math.PI*2);
+      ctx.strokeStyle=sw.col+op.toFixed(3)+')';
+      ctx.lineWidth=3.5/cam.zoom;
+      ctx.stroke();
+      return true;
+    });
+
+    /* particles */
+    particles = particles.filter(function(p){
+      p.x+=p.vx; p.y+=p.vy;
+      p.vy+=p.grav;
+      p.vx*=0.968; p.vy*=0.968;
+      p.life-=p.decay;
+      if(p.life<=0) return false;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,Math.max(0.4,p.r*p.life),0,Math.PI*2);
+      ctx.fillStyle=p.col;
+      ctx.globalAlpha=p.life*0.92;
+      ctx.fill();
+      ctx.globalAlpha=1;
+      return true;
+    });
+
+    /* blob de pigmento aplastado entre las dos balas */
+    if(crushT>0) drawPigmentBlob(contactX, contactY, crushT);
+
+    /* lipsticks con deformación */
+    if(state!=='done'&&lipA) drawLip(lipA.x,lipA.y,lipA.angle,lipA.scale,lipA.pal,1,lipA.crush||0);
+    if(state!=='done'&&lipB) drawLip(lipB.x,lipB.y,lipB.angle,lipB.scale,lipB.pal,1,lipB.crush||0);
+
+    ctx.restore(); /* end camera space */
+
+    /* white flash (screen space) */
+    if(flash>0.015){
+      ctx.fillStyle='rgba(255,255,255,'+Math.min(0.82,flash*0.8).toFixed(3)+')';
+      ctx.fillRect(0,0,w,h);
+      flash*=0.76;
+    }
+
+    raf=requestAnimationFrame(tick);
+  }
+
+  function pushTrail(l){
+    l.trail.push({x:l.x,y:l.y,a:l.angle});
+    if(l.trail.length>14) l.trail.shift();
+  }
+
+  /* pause when hero not visible */
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){
+      if(!raf) raf=requestAnimationFrame(tick);
+    } else {
+      cancelAnimationFrame(raf); raf=null;
+    }
+  },{threshold:0.1});
+  obs.observe(canvas);
+
+  makeLips();
+  raf=requestAnimationFrame(tick);
+})();
+</script>
 
 <!-- SHOP -->
 

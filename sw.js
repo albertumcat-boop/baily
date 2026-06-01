@@ -2,7 +2,7 @@ const CACHE_NAME = 'baily-v1.0.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/admin.html',
+  '/acceso-b.html',
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
