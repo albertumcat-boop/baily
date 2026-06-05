@@ -794,7 +794,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         <span class="flbl">Tonos / Variantes <span style="font-weight:400;color:var(--tl)">(opcional)</span></span>
         <div style="font-size:11px;color:var(--tl);margin-bottom:8px">Si el producto tiene varios tonos, agrégalos. Cada tono tiene stock propio.</div>
         <div id="tones-list"></div>
-        <button class="btn bs btn-sm" type="button" onclick="addToneRow()" style="margin-top:6px">
+        <button class="btn bs btn-sm" type="button" onclick="addToneRow();document.getElementById('pm-st-note').style.display='inline'" style="margin-top:6px">
           <i class="fa-solid fa-plus"></i> Agregar tono
         </button>
       </div>
@@ -1363,6 +1363,7 @@ function openAddP() {
   document.getElementById('pm-imgs-data').value = '[]';
   document.getElementById('pm-tags').value = '';
   const _tlc = document.getElementById('tones-list'); if(_tlc) _tlc.innerHTML = '';
+  const _stnote = document.getElementById('pm-st-note'); if(_stnote) _stnote.style.display='none';
   document.getElementById('pm-eid').value = '';
   document.getElementById('pm-imgs-preview').innerHTML = '';
   fillPMSelects();
@@ -1387,6 +1388,8 @@ function editP(id) {
     _tl.innerHTML = '';
     if (Array.isArray(p.tones) && p.tones.length) {
       p.tones.forEach(t => addToneRow(t));
+      const note = document.getElementById('pm-st-note');
+      if (note) note.style.display = 'inline';
     }
   }
   document.getElementById('pm-feat').checked = !!p.featured;
@@ -3131,15 +3134,30 @@ document.querySelectorAll('.sb-btn').forEach(btn => {
 function addToneRow(data) {
   data = data || {};
   const list = document.getElementById('tones-list');
-  const idx = list.children.length;
   const row = document.createElement('div');
   row.className = 'tone-admin-row';
   row.innerHTML = `
     <input class="tone-admin-nm" type="text" placeholder="Nombre del tono (ej: Tono 1, Nude...)" value="${data.name||''}" data-field="name">
-    <input class="tone-admin-stk" type="number" placeholder="Stock" value="${data.stock||0}" min="0" data-field="stock" title="Stock">
-    <input class="tone-admin-pr" type="number" placeholder="Precio $" value="${data.price||''}" step="0.01" min="0" data-field="price" title="Precio (deja vacío para usar el precio del producto)">
-    <button class="tone-admin-del" onclick="this.parentElement.remove()" title="Eliminar tono"><i class="fa-solid fa-trash"></i></button>`;
+    <input class="tone-admin-stk" type="number" placeholder="Stock" value="${data.stock||0}" min="0" data-field="stock" title="Stock" oninput="updateTotalStock()">
+    <input class="tone-admin-pr" type="number" placeholder="Precio $" value="${data.price||''}" step="0.01" min="0" data-field="price" title="Precio (opcional)">
+    <button class="tone-admin-del" onclick="this.parentElement.remove();updateTotalStock()" title="Eliminar tono"><i class="fa-solid fa-trash"></i></button>`;
   list.appendChild(row);
+  updateTotalStock();
+}
+
+function updateTotalStock() {
+  const rows = document.querySelectorAll('#tones-list .tone-admin-row');
+  if (!rows.length) return;
+  const total = Array.from(rows).reduce((sum, row) => {
+    const stk = parseInt(row.querySelector('[data-field="stock"]').value) || 0;
+    return sum + stk;
+  }, 0);
+  const stField = document.getElementById('pm-st');
+  if (stField) {
+    stField.value = total;
+    stField.style.background = 'var(--mp)';
+    stField.title = 'Stock calculado automáticamente de los tonos';
+  }
 }
 
 function collectTones() {
