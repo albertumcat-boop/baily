@@ -2355,15 +2355,14 @@ function loadDeliveryZones() {
 function detectZoneFromAddress(address) {
   if (!address || !_deliveryZones.length) return;
   const addressLower = address.toLowerCase();
-  // Try to match any zone keyword against the address
-  let matched = null;
+  // Score-based matching — best match wins (most keywords found)
+  let bestMatch = null, bestScore = 0;
   for (const zone of _deliveryZones) {
     const keywords = (zone.keywords || zone.name || '').toLowerCase().split(',').map(k => k.trim()).filter(Boolean);
-    if (keywords.some(kw => kw && addressLower.includes(kw))) {
-      matched = zone;
-      break;
-    }
+    const score = keywords.filter(kw => kw && addressLower.includes(kw)).length;
+    if (score > bestScore) { bestScore = score; bestMatch = zone; }
   }
+  const matched = bestScore > 0 ? bestMatch : null;
   if (matched) {
     CFG._zoneDeliveryCost = matched.price;
     const nameEl  = document.getElementById('zone-name-txt');
