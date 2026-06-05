@@ -1741,6 +1741,8 @@ function renderSettings() {
   document.getElementById('s-wa').value    = saved.wa || CFG.wa || '+584242655274';
   // Sync CFG with saved values
   Object.assign(CFG, saved);
+  updateIvaLockUI();
+  renderZonesTable();
 }
 
 function saveSF(key, inpId, isNum) {
