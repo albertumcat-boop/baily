@@ -325,6 +325,17 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
 .tone-admin-pr{width:78px;height:34px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:13px;font-family:inherit;outline:none}
 .tone-admin-del{width:30px;height:30px;border:none;background:var(--err);color:#fff;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
+
+/* DELIVERY ZONES */
+.zones-table{width:100%;border-collapse:collapse;margin-top:8px}
+.zones-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tl);padding:6px 10px;border-bottom:1.5px solid var(--mp)}
+.zones-table td{padding:6px 6px;border-bottom:1px solid var(--mp);vertical-align:middle}
+.zone-name-inp{width:100%;height:32px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:13px;font-family:inherit;outline:none;background:var(--white)}
+.zone-name-inp:focus{border-color:var(--mauve)}
+.zone-price-inp{width:70px;height:32px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:13px;font-family:inherit;outline:none;text-align:center;background:var(--white)}
+.zone-price-inp:focus{border-color:var(--mauve)}
+.zone-del-btn{width:28px;height:28px;border:none;background:var(--err);color:#fff;border-radius:var(--r);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+
 </style>
 <script id="default-promos" type="application/json">[{"id": "pr1", "tag": "⚡ PROMO FLASH", "title": "Compra 2 y lleva el 3ro GRATIS", "emoji": "💄", "color": "linear-gradient(140deg,#6E6070,#8F7F8A,#A090A0)", "active": true}, {"id": "pr2", "tag": "✨ DESCUENTO", "title": "35% OFF en bases y correctores", "emoji": "✨", "color": "linear-gradient(140deg,#5C4060,#8F7F8A,#B090B0)", "active": true}, {"id": "pr3", "tag": "📦 ENVÍO GRATIS", "title": "Envío gratis en compras mayores a $30", "emoji": "📦", "color": "linear-gradient(140deg,#4A3060,#7A6080,#9080A0)", "active": true}]</script>
 <script id="default-blog" type="application/json">[{"id": "bl1", "title": "5 trucos para que tu base dure todo el día", "category": "Tutorial", "type": "video", "url": "", "thumb": "", "excerpt": "Descubre los secretos pro para un maquillaje perfecto.", "date": "2026-05-01", "active": true}]</script>
@@ -737,7 +748,27 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         </div>
         <div class="sc">
           <h3><i class="fa-solid fa-truck" style="color:var(--mauve);margin-right:6px"></i>Delivery & Contacto</h3>
-          <div class="srow"><span class="slbl">Costo delivery ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-del" style="width:75px;height:34px" step="0.5"><button class="btn bp btn-sm" onclick="saveSF('deliveryCost','s-del',true)">Guardar</button></div></div>
+          <div class="srow"><span class="slbl">Costo delivery base ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-del" style="width:75px;height:34px" step="0.5"><button class="btn bp btn-sm" onclick="saveSF('deliveryCost','s-del',true)">Guardar</button></div></div>
+
+          <!-- DELIVERY ZONES TABLE -->
+          <div style="margin-top:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span class="slbl" style="margin:0">Precios por zona / municipio</span>
+              <button class="btn bs btn-sm" onclick="addZoneRow()"><i class="fa-solid fa-plus"></i> Agregar zona</button>
+            </div>
+            <div style="font-size:11px;color:var(--tl);margin-bottom:8px">El cliente selecciona su zona y el precio se aplica automáticamente. Deja vacío para usar el costo base.</div>
+            <div style="font-size:12px;color:var(--ts);margin-bottom:8px;line-height:1.7;background:var(--mp);padding:10px;border-radius:var(--r)">
+              <strong>Cómo funciona:</strong> Cuando el cliente escribe su dirección en el mapa, el sistema detecta automáticamente el municipio y aplica el precio correspondiente.<br>
+              En <strong>"Municipios"</strong> escribe las palabras clave separadas por comas (ej: <em>chacao, chacaito</em>).
+            </div>
+            <table class="zones-table">
+              <thead><tr><th>Nombre de la zona</th><th>Municipios / palabras clave</th><th>Precio $</th><th></th></tr></thead>
+              <tbody id="zones-tbody"></tbody>
+            </table>
+            <button class="btn bp" style="margin-top:10px;width:100%" onclick="saveZones()">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar zonas
+            </button>
+          </div>
           <div class="srow"><span class="slbl">Compra mínima gratis ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-free" style="width:75px;height:34px"><button class="btn bp btn-sm" onclick="saveSF('freeThreshold','s-free',true)">Guardar</button></div></div>
           <div class="srow"><span class="slbl">WhatsApp</span><div style="display:flex;gap:6px"><input class="finp" type="text" id="s-wa" style="width:145px;height:34px" placeholder="+58..."><button class="btn bp btn-sm" onclick="saveSF('wa','s-wa',false)">Guardar</button></div></div>
         </div>
@@ -3569,6 +3600,67 @@ function emergencyReset() {
   document.getElementById('pw-inp').value = '';
   document.getElementById('pw-inp').focus();
   alert('Acceso restablecido. Usa la contraseña: baily2026');
+}
+
+
+// === DELIVERY ZONES ===
+const ZONES_KEY = 'baily_delivery_zones';
+
+function getZones() {
+  try { return JSON.parse(localStorage.getItem(ZONES_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function saveZones() {
+  const rows = document.querySelectorAll('#zones-tbody tr');
+  const zones = [];
+  rows.forEach(row => {
+    const name     = row.querySelector('.zone-name-inp').value.trim();
+    const keywords = row.querySelector('.zone-keywords-inp').value.trim().toLowerCase();
+    const price    = parseFloat(row.querySelector('.zone-price-inp').value) || 0;
+    if (name) zones.push({ name, keywords, price });
+  });
+  localStorage.setItem(ZONES_KEY, JSON.stringify(zones));
+  // Sync to Firestore
+  if (fbReady && db) {
+    db.collection('settings').doc('delivery_zones').set({ list: zones })
+      .then(() => toast('✅ Zonas guardadas y sincronizadas ☁️', 'ok'))
+      .catch(() => toast('✅ Zonas guardadas localmente', 'ok'));
+  } else {
+    toast('✅ Zonas guardadas', 'ok');
+  }
+}
+
+function addZoneRow(data) {
+  data = data || {};
+  const tbody = document.getElementById('zones-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="zone-name-inp" type="text" placeholder="Ej: Zona Este" value="${data.name||''}"></td>
+    <td><input class="zone-keywords-inp" type="text" placeholder="chacao, baruta, el hatillo" value="${data.keywords||''}" style="width:100%;height:32px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 8px;font-size:12px;font-family:inherit;outline:none"></td>
+    <td><input class="zone-price-inp" type="number" placeholder="$" value="${data.price||''}" step="0.5" min="0"></td>
+    <td><button class="zone-del-btn" onclick="this.closest('tr').remove()" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>`;
+  tbody.appendChild(tr);
+}
+
+function renderZonesTable() {
+  const tbody = document.getElementById('zones-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const zones = getZones();
+  if (zones.length === 0) {
+    // Add 5 default zones as examples
+    const defaults = [
+      {name:'Zona Este',    keywords:'chacao, el rosal, los palos grandes, altamira, la castellana, country club', price:3},
+      {name:'Baruta',       keywords:'baruta, las mercedes, chuao, el cafetal, la trinidad', price:4},
+      {name:'El Hatillo',   keywords:'el hatillo, la lagunita, los naranjos', price:5},
+      {name:'Centro',       keywords:'libertador, el centro, catia, la candelaria, sabana grande', price:3.5},
+      {name:'Petare / Sucre', keywords:'sucre, petare, caucagüita, filas de mariches', price:4},
+    ];
+    defaults.forEach(z => addZoneRow(z));
+  } else {
+    zones.forEach(z => addZoneRow(z));
+  }
 }
 
 </script>
