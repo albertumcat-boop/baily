@@ -1331,7 +1331,7 @@ function renderCart(){
           <i class="fa-solid fa-motorcycle"></i>Delivery<span style="font-size:10px">Caracas</span>
         </button>
         <button class="ship-opt ${selShipMode==='nacional'?'on':''}" onclick="setShip('nacional',this)">
-          <i class="fa-solid fa-box"></i>Envío<span style="font-size:10px">Nacional MRW</span>
+          <i class="fa-solid fa-box"></i>Envío<span style="font-size:10px">Encomienda</span>
         </button>
         <button class="ship-opt ${selShipMode==='retiro'?'on':''}" onclick="setShip('retiro',this)">
           <i class="fa-solid fa-store"></i>Retiro<span style="font-size:10px">Personal</span>
@@ -1362,9 +1362,45 @@ function renderCart(){
     </div>
 
     <!-- INFO ENVIO NACIONAL -->
-    <div id="nacional-info" style="${selShipMode==='nacional'?'':'display:none'}padding:10px 12px;background:var(--cream);border-radius:var(--r);font-size:12px;color:var(--ts);margin-bottom:12px;line-height:1.7">
-      <strong>Envío por MRW</strong> · 24-48h hábiles<br>
-      Gratis en compras &gt; $${CFG.freeThreshold??30} · Cobro a destino si menor
+    <div id="nacional-info" style="${selShipMode==='nacional'?'':'display:none'}margin-bottom:12px">
+      <div style="background:var(--cream);border-radius:var(--r);padding:12px;font-size:13px;margin-bottom:10px">
+        <strong style="color:var(--mauve)">📦 Encomienda Nacional</strong><br>
+        <span style="color:var(--tl);font-size:11px">Completa los datos del destinatario para coordinar el envío</span>
+      </div>
+      <!-- Agencia -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Agencia de envío *</label>
+        <select id="enc-agencia" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--white);color:var(--text)" onchange="renderCart()">
+          <option value="">-- Selecciona la agencia --</option>
+          <option>Zoom</option>
+          <option>Tealca</option>
+          <option>Domesa</option>
+          <option>MRW</option>
+          <option>Aerocav</option>
+          <option>Ipostel</option>
+          <option>Otra</option>
+        </select>
+      </div>
+      <!-- Destinatario -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Nombre del destinatario *</label>
+        <input id="enc-nombre" type="text" placeholder="Nombre completo" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <!-- Ciudad destino -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Ciudad destino *</label>
+        <input id="enc-ciudad" type="text" placeholder="Ej: Valencia, Maracaibo, Barquisimeto..." style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <!-- Teléfono destinatario -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Teléfono del destinatario *</label>
+        <input id="enc-telefono" type="tel" placeholder="04XX-XXXXXXX" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <!-- Dirección exacta -->
+      <div style="margin-bottom:4px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Dirección de la agencia *</label>
+        <textarea id="enc-direccion" placeholder="Dirección de la agencia de envío donde se debe consignar el paquete..." style="width:100%;height:64px;border:1.5px solid var(--mp);border-radius:var(--r);padding:8px 10px;font-size:13px;font-family:inherit;resize:none;box-sizing:border-box"></textarea>
+      </div>
     </div>
 
     <!-- INFO RETIRO -->
@@ -1453,7 +1489,7 @@ function initDeliveryMap(){
         res.textContent='✅ Dentro de la zona de delivery — Costo: '+(free?'GRATIS 🎉':'$'+(CFG.deliveryCost??3));
       }else{
         res.className='map-result map-err';
-        res.textContent='⚠️ Fuera de la zona. Te recomendamos Envío Nacional (MRW).';
+        res.textContent='⚠️ Fuera de la zona. Te recomendamos Encomienda Nacional.';
       }
     }
 
@@ -1574,7 +1610,7 @@ function submitOrder(){
 `;});
 
   // Delivery info
-  const shipLabels={delivery:'Delivery en Caracas 🏍️',nacional:'Envío Nacional MRW 📦',retiro:'Retiro Personal 🏠'};
+  const shipLabels={delivery:'Delivery en Caracas 🏍️',nacional:'Encomienda Nacional 📦',retiro:'Retiro Personal 🏠'};
   msg+=`
 🚚 *Entrega:* ${shipLabels[selShipMode]||selShipMode}`;
   if(selShipMode==='delivery'&&selAddress){
@@ -1585,6 +1621,23 @@ function submitOrder(){
       msg+=`
 🗺️ *Ver en mapa:* ${gmaps}`;
     }
+  }
+  if(selShipMode==='nacional'){
+    const _ag  = document.getElementById('enc-agencia')?.value||'';
+    const _nm  = document.getElementById('enc-nombre')?.value.trim()||'';
+    const _cd  = document.getElementById('enc-ciudad')?.value.trim()||'';
+    const _tel = document.getElementById('enc-telefono')?.value.trim()||'';
+    const _dir = document.getElementById('enc-direccion')?.value.trim()||'';
+    msg+=`
+📦 *Agencia:* ${_ag}`;
+    msg+=`
+👤 *Destinatario:* ${_nm}`;
+    msg+=`
+🏙️ *Ciudad:* ${_cd}`;
+    msg+=`
+📞 *Tel destinatario:* ${_tel}`;
+    msg+=`
+🏠 *Dirección agencia:* ${_dir}`;
   }
 
   msg+=`
@@ -1865,6 +1918,7 @@ function selectMapResult(lat, lon, displayName) {
   selLat = parseFloat(lat).toFixed(6);
   selLng = parseFloat(lon).toFixed(6);
   selAddress = displayName;
+  detectZoneFromAddress(displayName);
 
   // Check coverage
   const ctr = CFG.deliveryCenter || [10.4806, -66.9036];
@@ -1882,7 +1936,7 @@ function selectMapResult(lat, lon, displayName) {
       res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost ?? 3));
     } else {
       res.className = 'map-result map-err';
-      res.textContent = '⚠️ Fuera de la zona de cobertura. Te recomendamos Envío Nacional (MRW).';
+      res.textContent = '⚠️ Fuera de la zona de cobertura. Te recomendamos Encomienda Nacional.';
     }
   }
 
