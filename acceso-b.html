@@ -754,7 +754,10 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           <div style="margin-top:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <span class="slbl" style="margin:0">Precios por zona / municipio</span>
-              <button class="btn bs btn-sm" onclick="addZoneRow()"><i class="fa-solid fa-plus"></i> Agregar zona</button>
+              <div style="display:flex;gap:6px">
+                <button class="btn bs btn-sm" onclick="addZoneRow()"><i class="fa-solid fa-plus"></i> Agregar zona</button>
+                <button class="btn bs btn-sm" onclick="if(confirm('¿Cargar zonas predefinidas de Caracas? Esto reemplazará las actuales.'))renderZonesTable(true)" title="Cargar zonas de Caracas"><i class="fa-solid fa-map-location-dot"></i> Zonas Caracas</button>
+              </div>
             </div>
             <div style="font-size:11px;color:var(--tl);margin-bottom:8px">El cliente selecciona su zona y el precio se aplica automáticamente. Deja vacío para usar el costo base.</div>
             <div style="font-size:12px;color:var(--ts);margin-bottom:8px;line-height:1.7;background:var(--mp);padding:10px;border-radius:var(--r)">
@@ -768,6 +771,21 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
             <button class="btn bp" style="margin-top:10px;width:100%" onclick="saveZones()">
               <i class="fa-solid fa-floppy-disk"></i> Guardar zonas
             </button>
+
+            <!-- ZONE SEARCH TOOL -->
+            <div style="margin-top:16px;background:var(--cream2);border-radius:var(--rm);padding:14px;border:1.5px solid var(--mp)">
+              <div style="font-weight:600;font-size:13px;color:var(--md);margin-bottom:8px">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--mauve)"></i> Verificar zona por sector
+              </div>
+              <div style="font-size:11px;color:var(--tl);margin-bottom:10px">Escribe un sector o dirección para ver a qué zona pertenece según tus palabras clave.</div>
+              <div style="display:flex;gap:8px">
+                <input class="finp" type="text" id="zone-search-inp" placeholder="Ej: Macaracuay, El Paraíso, Los Cortijos..." style="flex:1;height:38px" oninput="searchZone(this.value)" onkeydown="if(event.key==='Enter')searchZone(this.value)">
+                <button class="btn bs" onclick="searchZone(document.getElementById('zone-search-inp').value)">
+                  <i class="fa-solid fa-search"></i> Buscar
+                </button>
+              </div>
+              <div id="zone-search-result" style="margin-top:10px;font-size:13px;display:none"></div>
+            </div>
           </div>
           <div class="srow"><span class="slbl">Compra mínima gratis ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-free" style="width:75px;height:34px"><button class="btn bp btn-sm" onclick="saveSF('freeThreshold','s-free',true)">Guardar</button></div></div>
           <div class="srow"><span class="slbl">WhatsApp</span><div style="display:flex;gap:6px"><input class="finp" type="text" id="s-wa" style="width:145px;height:34px" placeholder="+58..."><button class="btn bp btn-sm" onclick="saveSF('wa','s-wa',false)">Guardar</button></div></div>
@@ -3650,18 +3668,96 @@ function renderZonesTable() {
   const zones = getZones();
   if (zones.length === 0) {
     // Add 5 default zones as examples
-    const defaults = [
-      {name:'Zona Este',    keywords:'chacao, el rosal, los palos grandes, altamira, la castellana, country club', price:3},
-      {name:'Baruta',       keywords:'baruta, las mercedes, chuao, el cafetal, la trinidad', price:4},
-      {name:'El Hatillo',   keywords:'el hatillo, la lagunita, los naranjos', price:5},
-      {name:'Centro',       keywords:'libertador, el centro, catia, la candelaria, sabana grande', price:3.5},
-      {name:'Petare / Sucre', keywords:'sucre, petare, caucagüita, filas de mariches', price:4},
-    ];
-    defaults.forEach(z => addZoneRow(z));
+    // Use complete Caracas zones database
+    CARACAS_ZONES_DEFAULT.forEach(z => addZoneRow(z));
   } else {
     zones.forEach(z => addZoneRow(z));
   }
 }
+
+
+// === ZONE SEARCH TOOL (admin) — uses Nominatim for accuracy ===
+async function searchZone(query) {
+  const q = (query || '').trim();
+  const resultEl = document.getElementById('zone-search-result');
+  if (!resultEl) return;
+  if (!q) { resultEl.style.display = 'none'; return; }
+
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<span style="color:var(--tl)"><i class="fa-solid fa-spinner fa-spin"></i> Buscando en OpenStreetMap...</span>';
+
+  // Collect zones from current table
+  const rows = document.querySelectorAll('#zones-tbody tr');
+  const zones = [];
+  rows.forEach(row => {
+    const name     = row.querySelector('.zone-name-inp')?.value.trim() || '';
+    const keywords = row.querySelector('.zone-keywords-inp')?.value.trim().toLowerCase() || '';
+    const price    = parseFloat(row.querySelector('.zone-price-inp')?.value) || 0;
+    if (name) zones.push({ name, keywords, price });
+  });
+
+  if (!zones.length) {
+    resultEl.innerHTML = '<span style="color:var(--tl)">No hay zonas configuradas aún.</span>';
+    return;
+  }
+
+  // Use Nominatim to get official address data
+  let fullAddress = q;
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q + ', Caracas, Venezuela') + '&format=json&limit=1&accept-language=es', {
+      headers: {'User-Agent': 'BAILY-Admin/1.0'}
+    });
+    const data = await r.json();
+    if (data && data[0]) {
+      fullAddress = data[0].display_name;
+    }
+  } catch(e) { /* use original query as fallback */ }
+
+  // Score-based zone matching
+  const qLower = fullAddress.toLowerCase();
+  let bestMatch = null, bestScore = 0;
+  for (const zone of zones) {
+    const kws = zone.keywords.split(',').map(k => k.trim()).filter(Boolean);
+    const score = kws.filter(kw => kw && qLower.includes(kw)).length;
+    if (score > bestScore) { bestScore = score; bestMatch = zone; }
+  }
+  const matched = bestScore > 0 ? bestMatch : null;
+
+  resultEl.style.display = 'block';
+  if (matched) {
+    resultEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E8F5EE;border-radius:var(--r);border:1.5px solid var(--ok)">
+        <i class="fa-solid fa-circle-check" style="color:var(--ok);font-size:18px"></i>
+        <div>
+          <div style="font-weight:600;color:var(--md)">"${query}" → <span style="color:var(--mauve)">${matched.name}</span></div>
+          <div style="font-size:12px;color:var(--ts)">Precio de delivery: <strong>$${matched.price.toFixed(2)}</strong></div>
+        </div>
+      </div>`;
+  } else {
+    // Show closest partial match
+    const partial = zones.filter(z => {
+      const kws = z.keywords.split(',').map(k => k.trim()).filter(Boolean);
+      return kws.some(kw => kw && (q.includes(kw.split(' ')[0]) || kw.includes(q.split(' ')[0])));
+    });
+    resultEl.innerHTML = `
+      <div style="padding:10px 14px;background:#FFF3E0;border-radius:var(--r);border:1.5px solid var(--warn)">
+        <div style="font-weight:600;color:var(--md)">
+          <i class="fa-solid fa-triangle-exclamation" style="color:var(--warn)"></i>
+          "${query}" no coincide con ninguna zona
+        </div>
+        <div style="font-size:12px;color:var(--ts);margin-top:4px">
+          Se aplicará el precio base de delivery.<br>
+          Para incluir este sector, agrégalo en el campo <strong>"Municipios / palabras clave"</strong> de la zona correspondiente.
+        </div>
+        ${partial.length ? `<div style="margin-top:6px;font-size:12px;color:var(--mauve)">¿Quisiste decir: <strong>${partial[0].name}</strong>? Agrega "${query}" a sus palabras clave.</div>` : ''}
+      </div>`;
+  }
+}
+
+
+// Complete Caracas zones database
+var CARACAS_ZONES_DEFAULT = [{"name": "Chacao", "price": 3, "keywords": "chacao, chacaito, el rosal, los palos grandes, altamira, la castellana, country club, bello campo, los chorros, sebucán, los dos caminos, la california norte, la carlota"}, {"name": "Baruta", "price": 4, "keywords": "baruta, las mercedes, chuao, el cafetal, la trinidad, los naranjos, la boyera, las minas, monterrey, lomas de la trinidad, colinas de la tahona, santa fe, cumbres de curumo"}, {"name": "El Hatillo", "price": 5, "keywords": "el hatillo, la lagunita, los naranjos del hatillo, mumú, oripoto, san francisco de yare, hoyo de la puerta, las tunitas, macaracuay, colinas del hatillo, lomas del hatillo"}, {"name": "Sucre (Este/Petare)", "price": 4, "keywords": "sucre, petare, caucagüita, filas de mariches, leoncio martínez, la dolorita, maca, macaracuay, la urbina, el marqués, palo verde, la california sur, boleíta, guaicaipuro"}, {"name": "Libertador Centro", "price": 3.5, "keywords": "libertador, el centro, catia, la candelaria, sabana grande, bello monte, las acacias, el recreo, santa rosalía, san juan, la pastora, altagracia, san josé, santa teresa, el silencio, la hoyada, el conde, san bernardino, los caobos"}, {"name": "Libertador Oeste", "price": 4, "keywords": "antímano, la vega, el junquito, macarao, caricuao, coche, el valle, las mayas, la yaguara, pinto salinas, 23 de enero, sucre catia, agua salud, la planicie"}, {"name": "Libertador Norte", "price": 3.5, "keywords": "el paraíso, las acacias, san agustín, las adjuntas, montalbán, la urbina norte, los rosales, los símbolos, el cementerio, la florida, los chaguaramos, las palmas"}];
+
 
 </script>
 </body>
