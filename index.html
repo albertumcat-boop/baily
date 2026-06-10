@@ -1519,63 +1519,103 @@ async function searchAgencyLocation(){
   }
 }
 
+// Place a single branch marker on the agency map
+function _placeAgencyMarker(elLat,elLng,name,fullAddr,phone){
+  const agIcon=L.divIcon({
+    html:`<div style="background:#6E5060;color:#fff;font-size:9px;width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;text-align:center">${name.substring(0,3).toUpperCase()}</div>`,
+    className:'',iconSize:[30,30],iconAnchor:[15,15]
+  });
+  const safeName=name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safeAddr=fullAddr.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safePhone=phone.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const popupHtml=`<div style="font-size:13px;min-width:170px;padding:2px">
+    <strong style="color:#6E5060;font-size:14px">${name}</strong><br>
+    ${fullAddr?`<span style="font-size:11px;color:#555">📍 ${fullAddr}</span><br>`:''}
+    ${phone?`<span style="font-size:11px;color:#555">📞 ${phone}</span><br>`:''}
+    <button onclick="selectAgencyBranch('${safeName}','${safeAddr}','${safePhone}',${elLat},${elLng})" style="margin-top:7px;width:100%;padding:6px 8px;background:#6E5060;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit">✅ Seleccionar esta sucursal</button>
+  </div>`;
+  const marker=L.marker([elLat,elLng],{icon:agIcon}).addTo(agencyMap).bindPopup(popupHtml);
+  agencyMarkers.push(marker);
+}
+
 async function fetchNearbyAgencies(lat,lng){
   const status=document.getElementById('agency-map-status');
-  // Remove old markers
   agencyMarkers.forEach(m=>agencyMap.removeLayer(m));
   agencyMarkers=[];
 
-  // Build agency name filter from CFG or defaults
-  const agNames=(CFG.agencies&&CFG.agencies.length?CFG.agencies:[{name:'MRW'},{name:'Zoom'},{name:'Tealca'},{name:'Domesa'}]).map(a=>a.name).join('|');
-  const overpassQuery=`[out:json][timeout:15];(node["name"~"${agNames}",i](around:5000,${lat},${lng});way["name"~"${agNames}",i](around:5000,${lat},${lng}););out center;`;
+  const agList=(CFG.agencies&&CFG.agencies.length
+    ?CFG.agencies
+    :[{name:'MRW'},{name:'Zoom'},{name:'Tealca'},{name:'Domesa'}]);
+  const agNames=agList.map(a=>a.name);
 
+  if(status) status.textContent='🔍 Buscando sucursales cercanas...';
+
+  // ── Método 1: Overpass API ────────────────────────────────────────────
+  let overpassOk=false;
   try{
-    const r=await fetch('https://overpass-api.de/api/interpreter',{
-      method:'POST',
-      body:'data='+encodeURIComponent(overpassQuery)
-    });
+    const nameFilter=agNames.join('|');
+    const q=`[out:json][timeout:12];(node["name"~"${nameFilter}",i](around:6000,${lat},${lng});way["name"~"${nameFilter}",i](around:6000,${lat},${lng});node["brand"~"${nameFilter}",i](around:6000,${lat},${lng});node["operator"~"${nameFilter}",i](around:6000,${lat},${lng});node["amenity"="post_office"](around:6000,${lat},${lng});node["shop"="courier"](around:6000,${lat},${lng}););out center;`;
+    const r=await Promise.race([
+      fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)}),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+    ]);
     const d=await r.json();
-    const elements=d.elements||[];
-
-    if(!elements.length){
-      if(status) status.textContent='⚠️ No se encontraron sucursales en 5km. Prueba buscar en otra área.';
-      return;
-    }
-
-    if(status) status.textContent=`📦 ${elements.length} sucursal(es) encontrada(s). Toca una para seleccionarla.`;
-
-    const agIcon=L.divIcon({html:'<div style="background:#8F7F8A;color:#fff;font-size:10px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-weight:700">AG</div>',className:'',iconSize:[28,28],iconAnchor:[14,14]});
-
-    elements.forEach(el=>{
-      const elLat=el.lat||(el.center&&el.center.lat);
-      const elLng=el.lon||(el.center&&el.center.lon);
-      if(!elLat||!elLng) return;
-      const name=el.tags&&el.tags.name?el.tags.name:'Agencia';
-      const street=el.tags&&(el.tags['addr:street']||el.tags['addr:full'])||'';
-      const housenumber=el.tags&&el.tags['addr:housenumber']||'';
-      const city=el.tags&&(el.tags['addr:city']||el.tags['addr:suburb'])||'';
-      const phone=el.tags&&el.tags.phone||el.tags&&el.tags['contact:phone']||'';
-      const addrParts=[street+(housenumber?' '+housenumber:''),city].filter(Boolean);
-      const fullAddr=addrParts.join(', ')||(elLat.toFixed(5)+', '+elLng.toFixed(5));
-
-      const popupHtml=`<div style="font-size:13px;min-width:160px">
-        <strong style="color:#6E5060">${name}</strong><br>
-        ${fullAddr?'<span style="font-size:11px">📍 '+fullAddr+'</span><br>':''}
-        ${phone?'<span style="font-size:11px">📞 '+phone+'</span><br>':''}
-        <button onclick="selectAgencyBranch('${name.replace(/'/g,"\\'")}','${fullAddr.replace(/'/g,"\\'")}','${phone.replace(/'/g,"\\'")}',${elLat},${elLng})" style="margin-top:6px;width:100%;padding:5px 8px;background:#8F7F8A;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">✅ Seleccionar esta sucursal</button>
-      </div>`;
-
-      const marker=L.marker([elLat,elLng],{icon:agIcon}).addTo(agencyMap).bindPopup(popupHtml);
-      agencyMarkers.push(marker);
+    const elements=(d.elements||[]).filter(el=>{
+      const n=(el.tags&&(el.tags.name||el.tags.brand||el.tags.operator)||'').toLowerCase();
+      return agNames.some(ag=>n.includes(ag.toLowerCase()))||el.tags&&(el.tags['amenity']==='post_office'||el.tags['shop']==='courier');
     });
-
-    // Fit map to show all markers
-    if(agencyMarkers.length){
-      const group=L.featureGroup(agencyMarkers);
-      agencyMap.fitBounds(group.getBounds().pad(0.2));
+    if(elements.length){
+      overpassOk=true;
+      elements.forEach(el=>{
+        const elLat=el.lat||(el.center&&el.center.lat);
+        const elLng=el.lon||(el.center&&el.center.lon);
+        if(!elLat||!elLng) return;
+        const name=el.tags&&(el.tags.name||el.tags.brand||el.tags.operator)||'Agencia';
+        const street=(el.tags&&(el.tags['addr:street']||el.tags['addr:full']))||'';
+        const num=(el.tags&&el.tags['addr:housenumber'])||'';
+        const city=(el.tags&&(el.tags['addr:city']||el.tags['addr:suburb']))||'';
+        const phone=(el.tags&&(el.tags.phone||el.tags['contact:phone']))||'';
+        const fullAddr=[street+(num?' '+num:''),city].filter(Boolean).join(', ')||(elLat.toFixed(5)+', '+elLng.toFixed(5));
+        _placeAgencyMarker(elLat,elLng,name,fullAddr,phone);
+      });
     }
-  }catch(e){
-    if(status) status.textContent='❌ Error al buscar sucursales. Intenta de nuevo.';
+  }catch(e){ /* fallthrough to Nominatim */ }
+
+  // ── Método 2: Nominatim search por cada agencia (fallback) ────────────
+  if(!overpassOk){
+    const searchAddr=document.getElementById('agency-map-search')?.value.trim()||'';
+    // Extract city/area hint from search text (last word or full string)
+    const areaHint=searchAddr.split(',').pop().trim()||'Caracas, Venezuela';
+    const results=[];
+    for(const ag of agList){
+      try{
+        const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(ag.name+' '+areaHint)}&format=json&limit=4&countrycodes=ve&accept-language=es`;
+        const r=await fetch(url,{headers:{'User-Agent':'BAILY-Store/1.0'}});
+        const items=await r.json();
+        items.forEach(item=>{
+          // Only include if reasonably close (within ~10km)
+          const dlat=Math.abs(parseFloat(item.lat)-lat);
+          const dlng=Math.abs(parseFloat(item.lon)-lng);
+          if(dlat<0.12&&dlng<0.12) results.push({name:ag.name,item});
+        });
+      }catch(e){}
+    }
+    if(results.length){
+      results.forEach(({name,item})=>{
+        const elLat=parseFloat(item.lat), elLng=parseFloat(item.lon);
+        const fullAddr=(item.display_name||'').split(',').slice(0,3).join(',').trim();
+        _placeAgencyMarker(elLat,elLng,name,fullAddr,'');
+      });
+    }
+  }
+
+  // ── Resultado final ───────────────────────────────────────────────────
+  if(agencyMarkers.length){
+    if(status) status.textContent=`📦 ${agencyMarkers.length} sucursal(es) encontrada(s). Toca una para seleccionarla.`;
+    const group=L.featureGroup(agencyMarkers);
+    agencyMap.fitBounds(group.getBounds().pad(0.25));
+  }else{
+    if(status) status.textContent='⚠️ No se encontraron sucursales en OpenStreetMap para esta zona. Puedes escribir el código manualmente.';
   }
 }
 
