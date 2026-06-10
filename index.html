@@ -1383,6 +1383,11 @@ function renderCart(){
         <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Nombre del destinatario *</label>
         <input id="enc-nombre" type="text" placeholder="Nombre completo" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
       </div>
+      <!-- Cédula destinatario -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Cédula del destinatario *</label>
+        <input id="enc-cedula" type="text" placeholder="Ej: V-12.345.678" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
       <!-- Ciudad destino -->
       <div style="margin-bottom:8px">
         <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Ciudad destino *</label>
@@ -1392,6 +1397,12 @@ function renderCart(){
       <div style="margin-bottom:8px">
         <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Teléfono del destinatario *</label>
         <input id="enc-telefono" type="tel" placeholder="04XX-XXXXXXX" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+      </div>
+      <!-- Código de agencia -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Código / N° de agencia *</label>
+        <input id="enc-cod-agencia" type="text" placeholder="Ej: 0080, Av. Libertador local 3..." style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;box-sizing:border-box">
+        <span style="font-size:10px;color:var(--tl);margin-top:3px;display:block">Número o dirección de la agencia más cercana a ti</span>
       </div>
       <!-- Dirección exacta -->
       <div style="margin-bottom:4px">
@@ -1630,13 +1641,17 @@ function submitOrder(){
     const _agName=_agCfg?_agCfg.name:_agId;
     const _agPhone=_agCfg&&_agCfg.phone?_agCfg.phone:'';
     const _nm  = document.getElementById('enc-nombre')?.value.trim()||'';
+    const _ced = document.getElementById('enc-cedula')?.value.trim()||'';
     const _cd  = document.getElementById('enc-ciudad')?.value.trim()||'';
     const _tel = document.getElementById('enc-telefono')?.value.trim()||'';
+    const _cod = document.getElementById('enc-cod-agencia')?.value.trim()||'';
     const _dir = document.getElementById('enc-direccion')?.value.trim()||'';
     if(_agName) msg+=`\n📦 *Agencia:* ${_agName}${_agPhone?' — 📞 '+_agPhone:''}`;
     if(_nm)  msg+=`\n👤 *Destinatario:* ${_nm}`;
+    if(_ced) msg+=`\n🪪 *Cédula destinatario:* ${_ced}`;
     if(_cd)  msg+=`\n🏙️ *Ciudad:* ${_cd}`;
     if(_tel) msg+=`\n📞 *Tel destinatario:* ${_tel}`;
+    if(_cod) msg+=`\n🔢 *Código/N° agencia cliente:* ${_cod}`;
     if(_dir) msg+=`\n🏠 *Dirección agencia:* ${_dir}`;
   }
 
