@@ -1362,6 +1362,18 @@ function renderCart(){
       <div class="map-wrap"><div id="delivery-map"></div></div>
       <div id="map-result" class="map-result" style="display:none"></div>
       <div id="addr-display" class="addr-display"></div>
+      <div id="access-warning" style="display:none;margin:8px 0;padding:12px;background:#FFF4E5;border:1.5px solid #E8A44A;border-radius:var(--r);font-size:13px">
+        <div style="font-weight:700;color:#8A5A00;margin-bottom:6px"><i class="fa-solid fa-triangle-exclamation" style="color:#E8A44A"></i> Zona de difícil acceso</div>
+        <div id="access-warning-msg" style="color:#6B4400;font-size:12px;line-height:1.5;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="confirmAccessOk()" style="flex:1;min-width:120px;padding:8px 10px;background:#fff;border:1.5px solid #E8A44A;border-radius:var(--r);font-size:12px;color:#8A5A00;cursor:pointer;font-family:inherit">
+            <i class="fa-solid fa-check"></i> Sí, hay acceso vehicular
+          </button>
+          <button onclick="switchToNacional()" style="flex:1;min-width:120px;padding:8px 10px;background:#6E5060;border:none;border-radius:var(--r);font-size:12px;color:#fff;cursor:pointer;font-family:inherit">
+            <i class="fa-solid fa-box"></i> Usar encomienda
+          </button>
+        </div>
+      </div>
       <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG.deliveryCost??3}</strong> · Gratis en compras &gt; $${CFG.freeThreshold??30}</div>
     </div>
 
@@ -1670,6 +1682,8 @@ function initDeliveryMap(){
     const dist=deliveryMap.distance(ctr,e.latlng);
     const res=document.getElementById('map-result');
     const addrEl=document.getElementById('addr-display');
+    hideAccessWarning();
+
     if(res){
       res.style.display='block';
       if(dist<=radius){
@@ -1686,10 +1700,12 @@ function initDeliveryMap(){
     }
 
     // Reverse geocode with Nominatim
+    let addr=`${selLat}, ${selLng}`;
+    let nominatimData=null;
     try{
       const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${selLat}&lon=${selLng}&format=json&accept-language=es`,{headers:{'User-Agent':'BAILY-Store/1.0'}});
-      const d=await r.json();
-      const addr=d.display_name||`${selLat},${selLng}`;
+      nominatimData=await r.json();
+      addr=nominatimData.display_name||addr;
       selAddress=addr;
       detectZoneFromAddress(addr);
       if(addrEl){
@@ -1698,10 +1714,63 @@ function initDeliveryMap(){
       }
       deliveryMarker.bindPopup(addr.split(',').slice(0,3).join(', ')).openPopup();
     }catch(err){
-      selAddress=`${selLat}, ${selLng}`;
+      selAddress=addr;
       if(addrEl){addrEl.style.display='block';addrEl.innerHTML=`📍 Coordenadas: ${selLat}, ${selLng}`;}
     }
+
+    // Check road accessibility (non-blocking, runs in background)
+    if(dist<=radius) checkRoadAccess(parseFloat(selLat),parseFloat(selLng),addr,nominatimData);
   });
+}
+
+// ═══════════════════════════════════════════
+// ROAD ACCESS CHECK — zona restringida
+// ═══════════════════════════════════════════
+function hideAccessWarning(){
+  const w=document.getElementById('access-warning');
+  if(w) w.style.display='none';
+}
+
+function checkRoadAccess(lat,lng,addr,nominatimData){
+  const zones=(CFG.restrictedZones&&CFG.restrictedZones.length)
+    ?CFG.restrictedZones
+    :['casa alta','barrio','sector','callejón','vereda','escalera','cerro','loma','ranchos','altos de','alto de'];
+
+  const addrLow=(addr||'').toLowerCase();
+
+  // Also check Nominatim place type fields
+  const tags=nominatimData&&nominatimData.address?nominatimData.address:{};
+  const placeFields=[tags.suburb,tags.neighbourhood,tags.quarter,tags.village,tags.hamlet,tags.road]
+    .filter(Boolean).map(s=>s.toLowerCase()).join(' ');
+  const haystack=addrLow+' '+placeFields;
+
+  const matchedZone=zones.find(z=>haystack.includes(z.toLowerCase()));
+
+  if(matchedZone){
+    const w=document.getElementById('access-warning');
+    const msg=document.getElementById('access-warning-msg');
+    if(w&&msg){
+      msg.innerHTML=`La dirección seleccionada parece estar en una zona de difícil acceso (<strong>${matchedZone}</strong>).<br>Nuestro delivery solo cubre vías principales con acceso vehicular directo.<br><br>Si tu edificio o residencia tiene acceso directo desde una vía principal, confirma abajo. De lo contrario, te recomendamos usar encomienda.`;
+      w.style.display='block';
+      w.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }
+}
+
+function confirmAccessOk(){
+  hideAccessWarning();
+  // Mark address as manually confirmed
+  const addrEl=document.getElementById('addr-display');
+  if(addrEl) addrEl.innerHTML+=' <span style="color:var(--ok);font-size:11px;font-weight:700">✅ Acceso confirmado</span>';
+  toast('Dirección confirmada ✓','ok');
+}
+
+function switchToNacional(){
+  hideAccessWarning();
+  // Find the encomienda button and click it programmatically
+  const btns=document.querySelectorAll('.ship-opt');
+  btns.forEach(b=>{ if(b.textContent.includes('Envío')||b.textContent.includes('Encomienda')) setShip('nacional',b); });
+  toast('Cambiado a Encomienda Nacional 📦','ok');
 }
 
 // ═══════════════════════════════════════════
@@ -2114,6 +2183,7 @@ function selectMapResult(lat, lon, displayName) {
   selLng = parseFloat(lon).toFixed(6);
   selAddress = displayName;
   detectZoneFromAddress(displayName);
+  hideAccessWarning();
 
   // Check coverage
   const ctr = CFG.deliveryCenter || [10.4806, -66.9036];
@@ -2129,6 +2199,8 @@ function selectMapResult(lat, lon, displayName) {
       const free = subD >= (CFG.freeThreshold ?? 30);
       res.className = 'map-result map-ok';
       res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost ?? 3));
+      // Check restricted zones only if within coverage
+      checkRoadAccess(parseFloat(selLat), parseFloat(selLng), displayName, null);
     } else {
       res.className = 'map-result map-err';
       res.textContent = '⚠️ Fuera de la zona de cobertura. Te recomendamos Encomienda Nacional.';

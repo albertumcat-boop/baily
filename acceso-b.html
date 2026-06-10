@@ -797,6 +797,17 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
             </div>
             <div id="agencies-list" style="width:100%"></div>
           </div>
+          <!-- ZONAS RESTRINGIDAS -->
+          <div class="srow" style="flex-direction:column;align-items:flex-start;gap:8px;border-top:var(--border);padding-top:16px">
+            <span class="slbl" style="font-size:13px;font-weight:700"><i class="fa-solid fa-triangle-exclamation" style="color:#C46A5A;margin-right:5px"></i>Zonas sin delivery</span>
+            <span style="font-size:11px;color:var(--tl);line-height:1.5">Si la dirección del cliente contiene alguna de estas palabras, se mostrará una advertencia y se ofrecerá coordinar por WhatsApp. Una palabra o frase por línea. No distingue mayúsculas.</span>
+            <textarea id="s-restricted" rows="7" style="width:100%;border:1.5px solid var(--mp);border-radius:var(--r);padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6" placeholder="casa alta&#10;barrio&#10;sector&#10;callejón&#10;vereda&#10;escalera&#10;propatria alta"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn bp btn-sm" onclick="saveRestrictedZones()"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+              <button class="btn bs btn-sm" onclick="loadDefaultRestrictedZones()"><i class="fa-solid fa-rotate-left"></i> Cargar lista base Caracas</button>
+            </div>
+            <div style="font-size:11px;color:var(--tl)">La lista base incluye términos comunes de barrios de Caracas.</div>
+          </div>
         </div>
         <div class="sc">
           <h3><i class="fa-solid fa-shield-halved" style="color:var(--mauve);margin-right:6px"></i>Seguridad</h3>
@@ -1116,9 +1127,18 @@ const CAT_DEFAULT = {
   otros:       { name: 'Otros',        icon: '📦' }
 };
 
+const RESTRICTED_ZONES_BASE = [
+  'casa alta','barrio','sector','callejón','callejon','vereda','escalera',
+  'ranchos','caserio','invasión','invasion','cerro','loma',
+  'propatria alta','catia la mar','la vega alta','el valle arriba',
+  'antimano arriba','caricuao alto','carapita','la dolorita','petare norte',
+  'chapellín','charneca','mamera','vista al sol','altos de','alto de'
+];
+
 const CFG_DEFAULT = {
   tasaBCV: 47.15,  descPct: 35, descActive: false,
   deliveryCost: 3, freeThreshold: 30, wa: '+584242655274',
+  restrictedZones: RESTRICTED_ZONES_BASE,
   agencies: [
     { id:'mrw',    name:'MRW',    phone:'0212-262.8500', info:'Lun–Sáb 8am–6pm' },
     { id:'zoom',   name:'Zoom',   phone:'0212-243.3000', info:'Lun–Vie 8am–5pm' },
@@ -1766,6 +1786,7 @@ function renderSettings() {
   updateIvaLockUI();
   renderZonesTable();
   renderAgencies();
+  renderRestrictedZones();
 }
 
 function renderAgencies() {
@@ -1808,6 +1829,31 @@ function saveAgenciesCFG() {
   current.agencies = CFG.agencies || [];
   localStorage.setItem(CK, JSON.stringify(current));
   toast('Agencias guardadas ✓', 'ok');
+}
+
+function renderRestrictedZones() {
+  const el = document.getElementById('s-restricted');
+  if (!el) return;
+  const zones = CFG.restrictedZones || RESTRICTED_ZONES_BASE;
+  el.value = zones.join('\n');
+}
+
+function saveRestrictedZones() {
+  const el = document.getElementById('s-restricted');
+  if (!el) return;
+  const zones = el.value.split('\n').map(l => l.trim().toLowerCase()).filter(Boolean);
+  let current = {};
+  try { current = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  current.restrictedZones = zones;
+  CFG.restrictedZones = zones;
+  localStorage.setItem(CK, JSON.stringify(current));
+  toast(`✓ ${zones.length} zonas restringidas guardadas`, 'ok');
+}
+
+function loadDefaultRestrictedZones() {
+  if (!confirm('¿Reemplazar la lista actual con la lista base de Caracas?')) return;
+  document.getElementById('s-restricted').value = RESTRICTED_ZONES_BASE.join('\n');
+  toast('Lista base cargada — guarda para aplicar', 'ok');
 }
 
 function saveSF(key, inpId, isNum) {
