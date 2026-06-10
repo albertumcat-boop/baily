@@ -815,6 +815,7 @@ let curP=null,curQty=1,selBrand=null,selCat=null,selSubcat=null;
 let srchTimer=null, deliveryMap=null, deliveryMarker=null;
 let selShipMode='delivery'; // delivery | nacional | retiro
 let selAddress=null, selLat=null, selLng=null;
+let selAgency=null, selAgencyNum='';
       detectZoneFromAddress(null, selLat);
 
 // ═══════════════════════════════════════════
@@ -1371,16 +1372,11 @@ function renderCart(){
       <!-- Agencia -->
       <div style="margin-bottom:8px">
         <label style="font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Agencia de envío *</label>
-        <select id="enc-agencia" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--white);color:var(--text)" onchange="renderCart()">
+        <select id="enc-agencia" style="width:100%;height:40px;border:1.5px solid var(--mp);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--white);color:var(--text)" onchange="setAgency(this.value)">
           <option value="">-- Selecciona la agencia --</option>
-          <option>Zoom</option>
-          <option>Tealca</option>
-          <option>Domesa</option>
-          <option>MRW</option>
-          <option>Aerocav</option>
-          <option>Ipostel</option>
-          <option>Otra</option>
+          ${(CFG.agencies&&CFG.agencies.length?CFG.agencies:[{id:'mrw',name:'MRW',phone:'',info:''},{id:'zoom',name:'Zoom',phone:'',info:''},{id:'tealca',name:'Tealca',phone:'',info:''},{id:'domesa',name:'Domesa',phone:'',info:''}]).map(ag=>`<option value="${ag.id}" ${selAgency===ag.id?'selected':''}>${ag.name}</option>`).join('')}
         </select>
+        ${(()=>{const ag=(CFG.agencies||[]).find(a=>a.id===selAgency);return ag&&(ag.phone||ag.info)?`<div style="margin-top:6px;padding:8px 10px;background:rgba(138,122,132,.1);border-radius:var(--r);font-size:12px;color:var(--ts)"><span style="font-weight:700">${ag.name}</span>${ag.phone?` · 📞 ${ag.phone}`:''}${ag.info?`<br><span style="font-size:11px;opacity:.8">${ag.info}</span>`:''}</div>`:'';})()}
       </div>
       <!-- Destinatario -->
       <div style="margin-bottom:8px">
@@ -1434,15 +1430,19 @@ function setShip(mode,btn){
   selShipMode=mode;
   document.querySelectorAll('.ship-opt').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  const dw=document.getElementById('delivery-wrap');
-  const ni=document.getElementById('nacional-info');
-  const ri=document.getElementById('retiro-info');
-  if(dw) dw.style.display=mode==='delivery'?'block':'none';
-  if(ni) ni.style.display=mode==='nacional'?'block':'none';
-  if(ri) ri.style.display=mode==='retiro'?'block':'none';
+  // Init default agency when switching to nacional
+  if(mode==='nacional' && !selAgency){
+    const ags=CFG.agencies&&CFG.agencies.length?CFG.agencies:[{id:'mrw',name:'MRW',phone:'',info:''}];
+    selAgency=ags[0].id;
+  }
   // Re-render cart to update totals with correct shipping cost
   renderCart();
   if(mode==='delivery') setTimeout(initDeliveryMap,200);
+}
+
+function setAgency(id){
+  selAgency=id;
+  renderCart();
 }
 
 // ═══════════════════════════════════════════
@@ -1625,21 +1625,19 @@ function submitOrder(){
     }
   }
   if(selShipMode==='nacional'){
-    const _ag  = document.getElementById('enc-agencia')?.value||'';
+    const _agId= document.getElementById('enc-agencia')?.value||selAgency||'';
+    const _agCfg=(CFG.agencies||[]).find(a=>a.id===_agId)||null;
+    const _agName=_agCfg?_agCfg.name:_agId;
+    const _agPhone=_agCfg&&_agCfg.phone?_agCfg.phone:'';
     const _nm  = document.getElementById('enc-nombre')?.value.trim()||'';
     const _cd  = document.getElementById('enc-ciudad')?.value.trim()||'';
     const _tel = document.getElementById('enc-telefono')?.value.trim()||'';
     const _dir = document.getElementById('enc-direccion')?.value.trim()||'';
-    msg+=`
-📦 *Agencia:* ${_ag}`;
-    msg+=`
-👤 *Destinatario:* ${_nm}`;
-    msg+=`
-🏙️ *Ciudad:* ${_cd}`;
-    msg+=`
-📞 *Tel destinatario:* ${_tel}`;
-    msg+=`
-🏠 *Dirección agencia:* ${_dir}`;
+    if(_agName) msg+=`\n📦 *Agencia:* ${_agName}${_agPhone?' — 📞 '+_agPhone:''}`;
+    if(_nm)  msg+=`\n👤 *Destinatario:* ${_nm}`;
+    if(_cd)  msg+=`\n🏙️ *Ciudad:* ${_cd}`;
+    if(_tel) msg+=`\n📞 *Tel destinatario:* ${_tel}`;
+    if(_dir) msg+=`\n🏠 *Dirección agencia:* ${_dir}`;
   }
 
   msg+=`

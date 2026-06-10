@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -789,6 +789,14 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           </div>
           <div class="srow"><span class="slbl">Compra mínima gratis ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-free" style="width:75px;height:34px"><button class="btn bp btn-sm" onclick="saveSF('freeThreshold','s-free',true)">Guardar</button></div></div>
           <div class="srow"><span class="slbl">WhatsApp</span><div style="display:flex;gap:6px"><input class="finp" type="text" id="s-wa" style="width:145px;height:34px" placeholder="+58..."><button class="btn bp btn-sm" onclick="saveSF('wa','s-wa',false)">Guardar</button></div></div>
+          <!-- AGENCIAS DE ENVÍO NACIONAL -->
+          <div class="srow" style="flex-direction:column;align-items:flex-start;gap:8px;border-top:var(--border);padding-top:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+              <span class="slbl" style="font-size:13px;font-weight:700">Agencias de envío nacional</span>
+              <button class="btn bp btn-sm" onclick="addAgency()"><i class="fa-solid fa-plus"></i> Agregar</button>
+            </div>
+            <div id="agencies-list" style="width:100%"></div>
+          </div>
         </div>
         <div class="sc">
           <h3><i class="fa-solid fa-shield-halved" style="color:var(--mauve);margin-right:6px"></i>Seguridad</h3>
@@ -1110,7 +1118,13 @@ const CAT_DEFAULT = {
 
 const CFG_DEFAULT = {
   tasaBCV: 47.15,  descPct: 35, descActive: false,
-  deliveryCost: 3, freeThreshold: 30, wa: '+584242655274'
+  deliveryCost: 3, freeThreshold: 30, wa: '+584242655274',
+  agencies: [
+    { id:'mrw',    name:'MRW',    phone:'0212-262.8500', info:'Lun–Sáb 8am–6pm' },
+    { id:'zoom',   name:'Zoom',   phone:'0212-243.3000', info:'Lun–Vie 8am–5pm' },
+    { id:'tealca', name:'Tealca', phone:'0212-285.6210', info:'Lun–Sáb 8am–5pm' },
+    { id:'domesa', name:'Domesa', phone:'0212-234.8111', info:'Lun–Vie 8am–5pm' }
+  ]
 };
 
 // ── INIT STATE ──
@@ -1558,26 +1572,33 @@ function renderCatsPage() {
 function openAddCat() {
   document.getElementById('cm-nm').value  = '';
   document.getElementById('cm-id').value  = '';
+  document.getElementById('cm-id').disabled = false;
   document.getElementById('cm-ico').value = '';
+  const prev = document.getElementById('cm-img-prev');
+  if (prev) { prev.src=''; prev.style.display='none'; }
+  const ttl = document.querySelector('#cm-bg .m-ttl span');
+  if (ttl) ttl.textContent = 'Nueva Categoría';
   document.getElementById('cm-bg').classList.add('on');
 }
 function saveCat() {
   const nm = document.getElementById('cm-nm').value.trim();
   if (!nm) { toast('⚠️ Ingresa el nombre de la categoría', 'err'); return; }
-  let id = document.getElementById('cm-id').value.trim();
+  const idField = document.getElementById('cm-id');
+  const isEditing = idField.disabled;
+  let id = idField.value.trim();
   if (!id) {
     id = nm.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]/g, '');
   }
-  if (CATS[id]) { toast('Esta categoría ya existe con ese ID', 'err'); return; }
+  if (!isEditing && CATS[id]) { toast('Esta categoría ya existe con ese ID', 'err'); return; }
   const ico = document.getElementById('cm-ico').value.trim() || '💜';
   const cimg = document.getElementById('cm-img').value || '';
-  CATS[id] = { name: nm, icon: ico, img: cimg };
+  CATS[id] = { ...(CATS[id]||{}), name: nm, icon: ico, img: cimg };
   saveCats();
   closeCM();
   renderCatsPage();
-  toast(`Categoría "${nm}" creada ✓`, 'ok');
+  toast(isEditing ? `Categoría "${nm}" actualizada ✓` : `Categoría "${nm}" creada ✓`, 'ok');
 }
 function delCat(id) {
   const cnt = PRODUCTS.filter(p => p.catId === id).length;
@@ -1585,7 +1606,7 @@ function delCat(id) {
   delete CATS[id];
   saveCats(); renderCatsPage(); toast('Categoría eliminada', 'ok');
 }
-function closeCM() { document.getElementById('cm-bg').classList.remove('on'); }
+function closeCM() { document.getElementById('cm-bg').classList.remove('on'); document.getElementById('cm-id').disabled=false; }
 
 // ════════════════════════════════════════════════
 // BRANDS
@@ -1744,6 +1765,49 @@ function renderSettings() {
   Object.assign(CFG, saved);
   updateIvaLockUI();
   renderZonesTable();
+  renderAgencies();
+}
+
+function renderAgencies() {
+  const box = document.getElementById('agencies-list');
+  if (!box) return;
+  const ags = CFG.agencies || [];
+  if (!ags.length) { box.innerHTML = '<p style="font-size:12px;color:var(--tl);margin:4px 0">No hay agencias. Agrega una.</p>'; return; }
+  box.innerHTML = ags.map((ag, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px">
+      <input class="finp" style="height:34px;font-size:12px" placeholder="ID (sin espacios)" value="${ag.id||''}" oninput="updateAgency(${i},'id',this.value)">
+      <input class="finp" style="height:34px;font-size:12px" placeholder="Nombre" value="${ag.name||''}" oninput="updateAgency(${i},'name',this.value)">
+      <input class="finp" style="height:34px;font-size:12px" placeholder="Teléfono" value="${ag.phone||''}" oninput="updateAgency(${i},'phone',this.value)">
+      <button class="btn bd btn-sm" onclick="delAgency(${i})" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    <div style="margin-bottom:10px">
+      <input class="finp" style="height:30px;font-size:11px;width:100%" placeholder="Info/horario (ej: Lun–Sáb 8am–6pm)" value="${ag.info||''}" oninput="updateAgency(${i},'info',this.value)">
+    </div>`).join('') + `<button class="btn bp btn-sm" style="margin-top:4px" onclick="saveAgenciesCFG()"><i class="fa-solid fa-floppy-disk"></i> Guardar agencias</button>`;
+}
+
+function updateAgency(i, key, val) {
+  if (!CFG.agencies) CFG.agencies = [];
+  if (CFG.agencies[i]) CFG.agencies[i][key] = val;
+}
+
+function addAgency() {
+  if (!CFG.agencies) CFG.agencies = [];
+  CFG.agencies.push({ id:'nueva', name:'Nueva Agencia', phone:'', info:'' });
+  renderAgencies();
+}
+
+function delAgency(i) {
+  if (!CFG.agencies) return;
+  CFG.agencies.splice(i, 1);
+  renderAgencies();
+}
+
+function saveAgenciesCFG() {
+  let current = {};
+  try { current = JSON.parse(localStorage.getItem(CK) || '{}'); } catch(e) {}
+  current.agencies = CFG.agencies || [];
+  localStorage.setItem(CK, JSON.stringify(current));
+  toast('Agencias guardadas ✓', 'ok');
 }
 
 function saveSF(key, inpId, isNum) {
