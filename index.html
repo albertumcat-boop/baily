@@ -1270,9 +1270,11 @@ function openCart(){
   document.getElementById('c-overlay').classList.add('open');
   document.getElementById('c-side').classList.add('open');
   document.body.style.overflow='hidden';
+  // Reset map instance so it re-inits on the fresh DOM after renderCart()
+  if(deliveryMap){ try{deliveryMap.remove();}catch(e){} deliveryMap=null; deliveryMarker=null; }
   renderCart();
-  // Init map after short delay (DOM ready)
-  setTimeout(initDeliveryMap,300);
+  // Wait for CSS transition + DOM paint before init
+  setTimeout(initDeliveryMap,450);
 }
 function closeCart(){
   document.getElementById('c-overlay').classList.remove('open');
@@ -1639,7 +1641,8 @@ function selectAgencyBranch(name,address,phone,lat,lng){
 function initDeliveryMap(){
   const el=document.getElementById('delivery-map');
   if(!el) return;
-  if(el.offsetParent===null) return; // hidden
+  // Check visibility by size, not offsetParent (avoids false-negative during slide animation)
+  if(el.getBoundingClientRect().width===0) return;
   if(deliveryMap){deliveryMap.invalidateSize();return;}
 
   const ctr=CFG.deliveryCenter||[10.4806,-66.9036];
