@@ -126,6 +126,10 @@ h1,h2,h3{font-family:Georgia,serif}
 .m-img{width:100%;height:310px;background:var(--cream2);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;font-size:100px}
 .m-img img{width:100%;height:100%;object-fit:contain}
 .m-close{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--ts)}
+.m-back-bar{display:none;align-items:center;padding:12px 16px 0;background:var(--white)}
+.m-back-btn{background:none;border:none;color:var(--mauve);font-size:14px;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:7px;padding:6px 0;font-weight:500}
+.m-back-btn:active{opacity:.6}
+@media(max-width:600px){.m-back-bar{display:flex}}
 .m-body{padding:26px 22px}
 .m-br{font-size:11px;color:var(--mauve);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
 .m-nm{font-family:Georgia,serif;font-size:21px;color:var(--text);line-height:1.3;margin-bottom:13px}
@@ -632,6 +636,9 @@ var _selTone=null;
 <!-- PRODUCT MODAL -->
 <div class="m-overlay" id="m-overlay" onclick="closeM(event)">
   <div class="m-box" id="m-box">
+    <div class="m-back-bar">
+      <button class="m-back-btn" onclick="closeMD()"><i class="fa-solid fa-arrow-left"></i> Regresar</button>
+    </div>
     <div class="m-img" id="m-img"><button class="m-close" onclick="closeMD()"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="m-body" id="m-body"></div>
     <div id="m-related" class="related-wrap" style="display:none"></div>

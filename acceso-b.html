@@ -759,7 +759,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
                 <button class="btn bs btn-sm" onclick="if(confirm('¿Cargar zonas predefinidas de Caracas? Esto reemplazará las actuales.'))renderZonesTable(true)" title="Cargar zonas de Caracas"><i class="fa-solid fa-map-location-dot"></i> Zonas Caracas</button>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--tl);margin-bottom:8px">El cliente selecciona su zona y el precio se aplica automáticamente. Deja vacío para usar el costo base.</div>
+            <div style="font-size:11px;color:var(--tl);margin-bottom:8px">Cada fila es una zona con su precio específico. Las <strong>palabras clave</strong> son los sectores o urbanizaciones que pertenecen a esa zona — separados por coma. El sistema detecta automáticamente el precio según la dirección del cliente.</div>
             <div style="font-size:12px;color:var(--ts);margin-bottom:8px;line-height:1.7;background:var(--mp);padding:10px;border-radius:var(--r)">
               <strong>Cómo funciona:</strong> Cuando el cliente escribe su dirección en el mapa, el sistema detecta automáticamente el municipio y aplica el precio correspondiente.<br>
               En <strong>"Municipios"</strong> escribe las palabras clave separadas por comas (ej: <em>chacao, chacaito</em>).
@@ -3567,12 +3567,24 @@ function updateCLDStatus() {
 // ── CATEGORY IMAGE HELPERS ──
 function handleCatImg(inp) {
   const file = inp.files[0]; if (!file) return;
+  // Disable save button and show uploading state
+  const saveBtn = document.querySelector('#cm-bg .btn.bp');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Subiendo foto...'; }
+  const prev = document.getElementById('cm-img-prev');
+  if (prev) { prev.style.opacity = '0.4'; }
+
   compressImage(file, async (dataUrl, kb) => {
-    const url = await uploadToStorage(dataUrl, 'cat_' + Date.now());
-    document.getElementById('cm-img').value = url;
-    const prev = document.getElementById('cm-img-prev');
-    prev.src = url; prev.style.display = 'block';
-    toast('Foto de categoría guardada ✓', 'ok');
+    try {
+      const url = await uploadToStorage(dataUrl, 'cat_' + Date.now());
+      document.getElementById('cm-img').value = url;
+      if (prev) { prev.src = url; prev.style.display = 'block'; prev.style.opacity = '1'; }
+      toast('Foto cargada ✓ — ahora pulsa Guardar', 'ok');
+    } catch(e) {
+      toast('❌ Error al subir la foto: ' + (e.message||e), 'err');
+      if (prev) prev.style.opacity = '1';
+    } finally {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar'; }
+    }
   });
   inp.value = '';
 }
@@ -3869,7 +3881,24 @@ async function searchZone(query) {
 
 
 // Complete Caracas zones database
-var CARACAS_ZONES_DEFAULT = [{"name": "Chacao", "price": 3, "keywords": "chacao, chacaito, el rosal, los palos grandes, altamira, la castellana, country club, bello campo, los chorros, sebucán, los dos caminos, la california norte, la carlota"}, {"name": "Baruta", "price": 4, "keywords": "baruta, las mercedes, chuao, el cafetal, la trinidad, los naranjos, la boyera, las minas, monterrey, lomas de la trinidad, colinas de la tahona, santa fe, cumbres de curumo"}, {"name": "El Hatillo", "price": 5, "keywords": "el hatillo, la lagunita, los naranjos del hatillo, mumú, oripoto, san francisco de yare, hoyo de la puerta, las tunitas, macaracuay, colinas del hatillo, lomas del hatillo"}, {"name": "Sucre (Este/Petare)", "price": 4, "keywords": "sucre, petare, caucagüita, filas de mariches, leoncio martínez, la dolorita, maca, macaracuay, la urbina, el marqués, palo verde, la california sur, boleíta, guaicaipuro"}, {"name": "Libertador Centro", "price": 3.5, "keywords": "libertador, el centro, catia, la candelaria, sabana grande, bello monte, las acacias, el recreo, santa rosalía, san juan, la pastora, altagracia, san josé, santa teresa, el silencio, la hoyada, el conde, san bernardino, los caobos"}, {"name": "Libertador Oeste", "price": 4, "keywords": "antímano, la vega, el junquito, macarao, caricuao, coche, el valle, las mayas, la yaguara, pinto salinas, 23 de enero, sucre catia, agua salud, la planicie"}, {"name": "Libertador Norte", "price": 3.5, "keywords": "el paraíso, las acacias, san agustín, las adjuntas, montalbán, la urbina norte, los rosales, los símbolos, el cementerio, la florida, los chaguaramos, las palmas"}];
+var CARACAS_ZONES_DEFAULT = [
+  {"name":"Altamira / Los Palos Grandes","price":3,"keywords":"altamira, los palos grandes, la castellana, bello campo, campo alegre, country club, el rosal, las mercedes de altamira"},
+  {"name":"Chacao / Chacaíto","price":3,"keywords":"chacao, chacaíto, chacaito, el rosal, los dos caminos, sebucán, sebucán norte, los chorros, la carlota"},
+  {"name":"Las Mercedes","price":3.5,"keywords":"las mercedes, chuao, el cafetal, los naranjos, santa fe norte"},
+  {"name":"Baruta / La Trinidad","price":4,"keywords":"baruta, la trinidad, lomas de la trinidad, colinas de la tahona, monterrey, las minas, la boyera, santa fe sur, cumbres de curumo"},
+  {"name":"El Cafetal / El Hatillo","price":4.5,"keywords":"el cafetal, el hatillo, la lagunita, los naranjos del hatillo, colinas del hatillo, lomas del hatillo, mumú, oripoto, hoyo de la puerta"},
+  {"name":"La California / Boleíta","price":3.5,"keywords":"la california norte, la california sur, boleíta norte, boleíta sur, la urbina, el marqués, palo verde"},
+  {"name":"Petare / Leoncio Martínez","price":4,"keywords":"petare, leoncio martínez, maca, caucagüita, filas de mariches, la dolorita, guaicaipuro"},
+  {"name":"Sabana Grande / Bello Monte","price":3,"keywords":"sabana grande, bello monte, las acacias, el recreo, los chaguaramos, las palmas, la florida, los caobos"},
+  {"name":"San Bernardino / Los Caobos","price":3,"keywords":"san bernardino, los caobos, la florida, el paraíso, el cementerio, los rosales, los símbolos"},
+  {"name":"La Candelaria / Altagracia","price":3,"keywords":"la candelaria, altagracia, san juan, santa rosalía, san agustín, santa teresa, el silencio, la hoyada, el conde, san josé"},
+  {"name":"Catia / Propatria","price":4,"keywords":"catia, propatria, agua salud, sucre catia, la planicie, el manicomio, pinto salinas, la pastora"},
+  {"name":"23 de Enero / Montalbán","price":4,"keywords":"23 de enero, montalbán, las adjuntas, el paraíso norte"},
+  {"name":"El Valle / Coche","price":4,"keywords":"el valle, coche, las mayas, la yaguara, pinto salinas"},
+  {"name":"La Vega / Antímano","price":4.5,"keywords":"la vega, antímano, caricuao, macarao, el junquito"},
+  {"name":"Macaracuay / Palo Verde","price":3.5,"keywords":"macaracuay, palo verde, la urbina este, macuto caracas"},
+  {"name":"Los Dos Caminos / La Urbina","price":3.5,"keywords":"los dos caminos, la urbina, el marqués norte, buena vista"}
+];
 
 
 </script>
