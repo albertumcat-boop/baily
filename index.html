@@ -1079,11 +1079,31 @@ function openM(id){
     `;
   document.getElementById('m-overlay').classList.add('open');
   document.body.style.overflow='hidden';
+  // Push a history entry so Android back button closes the modal instead of leaving the app
+  history.pushState({modal:'product'}, '', '#producto');
   // Render related products
   setTimeout(()=>renderRelated(p), 100);
 }
 function closeM(e){if(e.target===document.getElementById('m-overlay'))closeMD();}
-function closeMD(){document.getElementById('m-overlay').classList.remove('open');document.body.style.overflow='';}
+function closeMD(){
+  document.getElementById('m-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  // Remove the history entry we pushed (only if we're still on #producto)
+  if(location.hash==='#producto') history.back();
+}
+// Intercept browser/Android back button
+window.addEventListener('popstate', function(e){
+  if(document.getElementById('m-overlay').classList.contains('open')){
+    document.getElementById('m-overlay').classList.remove('open');
+    document.body.style.overflow='';
+  }
+  // Also close cart if open
+  if(document.getElementById('c-side').classList.contains('open')){
+    document.getElementById('c-overlay').classList.remove('open');
+    document.getElementById('c-side').classList.remove('open');
+    document.body.style.overflow='';
+  }
+});
 function chgQ(d){if(!curP)return;curQty=Math.max(1,Math.min(+curP.stock||99,curQty+d));document.getElementById('m-qv').textContent=curQty;}
 function addCurr(){
   if(!curP) return;
@@ -1277,6 +1297,8 @@ function openCart(){
   document.getElementById('c-overlay').classList.add('open');
   document.getElementById('c-side').classList.add('open');
   document.body.style.overflow='hidden';
+  // Push history entry so Android back button closes cart instead of leaving app
+  history.pushState({modal:'cart'}, '', '#carrito');
   // Reset map instance so it re-inits on the fresh DOM after renderCart()
   if(deliveryMap){ try{deliveryMap.remove();}catch(e){} deliveryMap=null; deliveryMarker=null; }
   renderCart();
@@ -1287,6 +1309,7 @@ function closeCart(){
   document.getElementById('c-overlay').classList.remove('open');
   document.getElementById('c-side').classList.remove('open');
   document.body.style.overflow='';
+  if(location.hash==='#carrito') history.back();
 }
 
 function renderCart(){
