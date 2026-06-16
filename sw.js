@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baily-v1.0.0';
+const CACHE_NAME = 'baily-v1.0.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -30,6 +30,27 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('firebase') || e.request.url.includes('firestore')) return;
 
+  // HTML pages (the app shell) must always be checked against the network first.
+  // Caching them cache-first means phones keep running old code forever after an update.
+  const isHtmlPage = e.request.mode === 'navigate' ||
+    e.request.destination === 'document' ||
+    e.request.url.endsWith('.html') ||
+    e.request.url.endsWith('/');
+
+  if (isHtmlPage) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Static assets (fonts, css, libraries): cache-first is fine, they rarely change.
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
@@ -38,9 +59,7 @@ self.addEventListener('fetch', (e) => {
         const clone = res.clone();
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         return res;
-      }).catch(() => {
-        if (e.request.destination === 'document') return caches.match('/index.html');
-      });
+      }).catch(() => {});
     })
   );
 });

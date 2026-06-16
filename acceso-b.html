@@ -1302,7 +1302,7 @@ function goPg(name, btn) {
 function renderPage(name) {
   const map = {
     dashboard:  renderDash,
-    orders:     renderOrders,
+    orders:     () => { renderOrders(); pullNewOrdersFromCloud(); },
     firebase:   renderFirebasePage,
     promos:     renderPromos,
     blog:       renderBlogAdmin,
@@ -3018,7 +3018,35 @@ const _REAL_FB_CFG = {
     localStorage.setItem(FB_CFG_KEY, JSON.stringify(_REAL_FB_CFG));
   }
   initFirebase(cfg);
+  // Pull any new orders placed by customers from the storefront
+  setTimeout(pullNewOrdersFromCloud, 1500);
+  setInterval(pullNewOrdersFromCloud, 60000);
 })();
+
+// Merge orders placed by customers (pushed from index.html) into local order list,
+// without overwriting orders the admin already confirmed/cancelled locally.
+async function pullNewOrdersFromCloud() {
+  if (!fbReady || !db) return;
+  try {
+    const snap = await db.collection('orders').get();
+    if (snap.empty) return;
+    const cloudOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const local = getOrders();
+    const localIds = new Set(local.map(o => o.id));
+    let added = 0;
+    cloudOrders.forEach(co => {
+      if (!localIds.has(co.id)) { local.unshift(co); added++; }
+    });
+    if (added > 0) {
+      localStorage.setItem(ORD_KEY, JSON.stringify(local));
+      updateOrderBadge();
+      if (document.getElementById('pg-orders') && document.getElementById('pg-orders').classList.contains('on')) {
+        renderOrders();
+      }
+      toast(`📬 ${added} pedido(s) nuevo(s) recibido(s)`, 'ok');
+    }
+  } catch(e) { console.log('pullNewOrdersFromCloud error:', e.message); }
+}
 
 function renderFirebasePage() {
   const cfg = loadFBConfig() || _REAL_FB_CFG;

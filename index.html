@@ -1989,6 +1989,13 @@ _(Tasa BCV: ${tasa.toLocaleString('es-VE',{minimumFractionDigits:2})})_`;
   const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
   orders.unshift(order);localStorage.setItem('baily_orders',JSON.stringify(orders));
 
+  // Send the order to Firestore so it shows up in the admin "Pedidos" panel
+  if(_storeDb){
+    _storeDb.collection('orders').doc(order.id).set(order)
+      .then(()=>console.log('[BAILY Store] Pedido enviado a Firestore'))
+      .catch(e=>console.log('[BAILY Store] Error enviando pedido:',e.message));
+  }
+
   window.open(`https://wa.me/${CFG.wa}?text=${encodeURIComponent(msg)}`,'_blank');
   cart=[];saveCart();closeCO();closeCart();
   toast('¡Pedido enviado! Espera confirmación 📲','ok');
