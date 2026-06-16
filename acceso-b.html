@@ -742,6 +742,8 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
               <button class="btn bs btn-sm" onclick="syncFromCloud('promos')"><i class="fa-solid fa-download"></i> Bajar Promos</button>
               <button class="btn bp btn-sm" onclick="syncToCloud('blog')"><i class="fa-solid fa-upload"></i> Subir Blog</button>
               <button class="btn bs btn-sm" onclick="syncFromCloud('blog')"><i class="fa-solid fa-download"></i> Bajar Blog</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('categories')"><i class="fa-solid fa-upload"></i> Subir Fotos Categorías</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('brands')"><i class="fa-solid fa-upload"></i> Subir Fotos Marcas</button>
             </div>
             <button class="btn bp" style="width:100%" onclick="syncAllToCloud()">
               <i class="fa-solid fa-cloud-arrow-up"></i> Subir TODO a la nube (primera vez)
@@ -1257,9 +1259,25 @@ function saveProds() {
     }, 1500);
   }
 }
-function saveCats()   { localStorage.setItem(CATK, JSON.stringify(CATS)); }
-function saveBrands() { localStorage.setItem(BRK,  JSON.stringify(BRANDS)); }
+function saveCats()   { localStorage.setItem(CATK, JSON.stringify(CATS)); syncCatsBrandsToCloud('categories'); }
+function saveBrands() { localStorage.setItem(BRK,  JSON.stringify(BRANDS)); syncCatsBrandsToCloud('brands'); }
 function saveCfg()    { localStorage.setItem(CK,   JSON.stringify(CFG)); }
+
+// Auto-sync category/brand photos to Firestore so they appear on every device
+function syncCatsBrandsToCloud(type) {
+  if (!fbReady || !db) return;
+  clearTimeout(window._fbCatsBrandsTimer);
+  window._fbCatsBrandsTimer = setTimeout(() => {
+    try {
+      if (type === 'categories') {
+        db.collection('settings').doc('categories').set(CATS).catch(e => console.log('Cat sync error:', e));
+      } else if (type === 'brands') {
+        const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
+        db.collection('settings').doc('brands').set(meta).catch(e => console.log('Brand sync error:', e));
+      }
+    } catch(e) { console.log('syncCatsBrandsToCloud error:', e); }
+  }, 1200);
+}
 
 // ════════════════════════════════════════════════
 // NAVIGATION
@@ -3151,6 +3169,15 @@ async function syncToCloud(type) {
       const posts = getBlogPosts();
       await db.collection('settings').doc('blog').set({list: posts});
       fbLog(`✅ ${posts.length} posts subidos`);
+
+    } else if (type === 'categories') {
+      await db.collection('settings').doc('categories').set(CATS);
+      fbLog('✅ Fotos de categorías subidas');
+
+    } else if (type === 'brands') {
+      const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
+      await db.collection('settings').doc('brands').set(meta);
+      fbLog('✅ Fotos de marcas subidas');
     }
 
     toast(`✅ ${type} sincronizado`, 'ok');

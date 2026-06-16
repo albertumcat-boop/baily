@@ -814,6 +814,37 @@ async function loadProdsFromFirestore() {
     console.log('[BAILY Store] Error cargando desde Firestore:', e.message);
   }
 }
+
+// Load category & brand photos/data from Firestore (admin edits sync here)
+async function loadCatsBrandsFromFirestore() {
+  if (!_storeDb) return;
+  try {
+    const catDoc = await _storeDb.collection('settings').doc('categories').get();
+    if (catDoc.exists) {
+      const cloudCats = catDoc.data() || {};
+      Object.keys(cloudCats).forEach(cid => {
+        CATS[cid] = Object.assign({}, CATS[cid] || {}, cloudCats[cid]);
+      });
+      console.log('[BAILY Store] Categorías actualizadas desde Firestore');
+    }
+  } catch(e) { console.log('[BAILY Store] Error cargando categorías:', e.message); }
+  try {
+    const brDoc = await _storeDb.collection('settings').doc('brands').get();
+    if (brDoc.exists) {
+      const cloudBrands = brDoc.data() || {};
+      const localMeta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
+      Object.keys(cloudBrands).forEach(bid => {
+        localMeta[bid] = Object.assign({}, localMeta[bid] || {}, cloudBrands[bid]);
+      });
+      localStorage.setItem('baily_brand_meta', JSON.stringify(localMeta));
+      console.log('[BAILY Store] Marcas actualizadas desde Firestore');
+    }
+  } catch(e) { console.log('[BAILY Store] Error cargando marcas:', e.message); }
+  // Refresh visible UI with new images
+  if (selCat) renderProds();
+  else if (selBrand) renderCats(selBrand);
+  else renderBrands();
+}
 let cart  = JSON.parse(localStorage.getItem('baily_cart')||'[]');
 let favs  = JSON.parse(localStorage.getItem('baily_favs')||'[]');
 let CUSTOMERS = JSON.parse(localStorage.getItem(CLK)||'[]');
@@ -1404,7 +1435,7 @@ function renderCart(){
           </button>
         </div>
       </div>
-      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG.deliveryCost??3}</strong> · Gratis en compras &gt; $${CFG.freeThreshold??30}</div>
+      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG._zoneDeliveryCost!==undefined?CFG._zoneDeliveryCost:(CFG.deliveryCost??3)}</strong> · Gratis en compras &gt; $${CFG.freeThreshold??30}</div>
     </div>
 
     <!-- INFO ENVIO NACIONAL -->
@@ -1722,7 +1753,7 @@ function initDeliveryMap(){
         const subD=sub-desc;
         const free=subD>=(CFG.freeThreshold??30);
         res.className='map-result map-ok';
-        res.textContent='✅ Dentro de la zona de delivery — Costo: '+(free?'GRATIS 🎉':'$'+(CFG.deliveryCost??3));
+        res.textContent='✅ Dentro de la zona de delivery — calculando costo...';
       }else{
         res.className='map-result map-err';
         res.textContent='⚠️ Fuera de la zona. Te recomendamos Encomienda Nacional.';
@@ -2004,6 +2035,7 @@ loadDeliveryZones();
 setTimeout(async () => {
   await loadCFGFromFirestore();
   await loadProdsFromFirestore();
+  await loadCatsBrandsFromFirestore();
   await loadBlogFromFirestore();
   await loadPromosFromFirestore();
   renderPromoSlider();
@@ -2228,7 +2260,8 @@ function selectMapResult(lat, lon, displayName) {
       const subD = sub - desc;
       const free = subD >= (CFG.freeThreshold ?? 30);
       res.className = 'map-result map-ok';
-      res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + (CFG.deliveryCost ?? 3));
+      const _zCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost ?? 3);
+      res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + _zCost);
       // Check restricted zones only if within coverage
       checkRoadAccess(parseFloat(selLat), parseFloat(selLng), displayName, null);
     } else {
@@ -2730,6 +2763,16 @@ function detectZoneFromAddress(address) {
     const nfEl  = document.getElementById('zone-not-found');
     if (detEl) detEl.style.display = 'none';
     if (nfEl)  nfEl.style.display  = 'block';
+  }
+  // Update the map-result cost text now that the zone price is known
+  const res = document.getElementById('map-result');
+  if (res && res.classList.contains('map-ok')) {
+    const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const desc = CFG.descActive ? sub * (CFG.descPct ?? 35) / 100 : 0;
+    const subD = sub - desc;
+    const free = subD >= (CFG.freeThreshold ?? 30);
+    const cost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost ?? 3);
+    res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + cost);
   }
   renderCart();
 }
