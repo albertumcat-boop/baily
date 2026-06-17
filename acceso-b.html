@@ -2229,14 +2229,27 @@ function confirmOrder(orderId) {
   if (!ord) return;
 
   // Deduct stock from each item
+  // Tone/variant cart items store a synthetic productId (e.g. "p0001_t0") and
+  // the real product id separately as realId — must look up by realId or the
+  // product (and its specific tone) is never found and stock is never deducted.
   const stockWarnings = [];
   ord.items.forEach(item => {
-    const p = PRODUCTS.find(x => x.id === item.productId);
+    const p = PRODUCTS.find(x => x.id === (item.realId || item.productId));
     if (p) {
-      const prev = +p.stock || 0;
-      p.stock = Math.max(0, prev - item.qty);
-      if (prev < item.qty) {
-        stockWarnings.push(`${item.name}: solo había ${prev}, se vendieron ${item.qty}`);
+      if (Array.isArray(p.tones) && item.toneIdx !== undefined && p.tones[item.toneIdx]) {
+        const tone = p.tones[item.toneIdx];
+        const prevT = +tone.stock || 0;
+        tone.stock = Math.max(0, prevT - item.qty);
+        if (prevT < item.qty) {
+          stockWarnings.push(`${item.name}: solo había ${prevT}, se vendieron ${item.qty}`);
+        }
+        p.stock = p.tones.reduce((s, t) => s + (+t.stock || 0), 0);
+      } else {
+        const prev = +p.stock || 0;
+        p.stock = Math.max(0, prev - item.qty);
+        if (prev < item.qty) {
+          stockWarnings.push(`${item.name}: solo había ${prev}, se vendieron ${item.qty}`);
+        }
       }
     }
   });
@@ -2255,6 +2268,14 @@ function confirmOrder(orderId) {
   }
 }
 
+// Delete an order doc from Firestore so pullNewOrdersFromCloud() doesn't
+// resurrect it as "new" on the next poll — cancelling/deleting locally is
+// not enough since syncToCloud('orders') only ever upserts, never deletes.
+function deleteOrderFromCloud(orderId) {
+  if (!fbReady || !db) return;
+  db.collection('orders').doc(orderId).delete().catch(e => console.log('Order cloud delete error:', e.message));
+}
+
 function cancelOrder(orderId) {
   if (!confirm('¿Cancelar este pedido? El stock NO será descontado.')) return;
   const orders = getOrders();
@@ -2264,6 +2285,7 @@ function cancelOrder(orderId) {
   // Remove cancelled orders (or keep as cancelled)
   const filtered = orders.filter(o => o.id !== orderId); // just remove it
   saveOrders(filtered);
+  deleteOrderFromCloud(orderId);
   renderOrders();
   toast('Pedido cancelado — sin cambios en el inventario', 'ok');
 }
@@ -2271,13 +2293,16 @@ function cancelOrder(orderId) {
 function deleteOrder(orderId) {
   const orders = getOrders().filter(o => o.id !== orderId);
   saveOrders(orders);
+  deleteOrderFromCloud(orderId);
   renderOrders();
   toast('Pedido eliminado del historial', 'ok');
 }
 
 function clearConfirmed() {
+  const toClear = getOrders().filter(o => o.status === 'confirmed');
   const orders = getOrders().filter(o => o.status !== 'confirmed');
   saveOrders(orders);
+  toClear.forEach(o => deleteOrderFromCloud(o.id));
   renderOrders();
   toast('Historial limpiado', 'ok');
 }
@@ -3034,11 +3059,34 @@ async function pullNewOrdersFromCloud() {
     const local = getOrders();
     const localIds = new Set(local.map(o => o.id));
     let added = 0;
+    const customers = getCustomers();
     cloudOrders.forEach(co => {
-      if (!localIds.has(co.id)) { local.unshift(co); added++; }
+      if (!localIds.has(co.id)) {
+        local.unshift(co); added++;
+        // Upsert the customer into the admin's customer database too —
+        // it was only ever saved to the shopper's own device until now.
+        if (co.customer && co.customer.cedula) {
+          let c = customers.find(x => x.cedula && x.cedula.toLowerCase() === co.customer.cedula.toLowerCase());
+          if (c) {
+            c.name = co.customer.name || c.name;
+            c.email = co.customer.email || c.email;
+            c.tel = co.customer.tel || c.tel;
+            c.orders = (c.orders || 0) + 1;
+            c.lastOrder = new Date().toISOString();
+          } else {
+            customers.push({
+              id: 'c' + Date.now() + Math.random().toString(36).slice(2, 6),
+              name: co.customer.name || '', cedula: co.customer.cedula,
+              email: co.customer.email || '', tel: co.customer.tel || '',
+              orders: 1, firstOrder: new Date().toISOString(), lastOrder: new Date().toISOString()
+            });
+          }
+        }
+      }
     });
     if (added > 0) {
       localStorage.setItem(ORD_KEY, JSON.stringify(local));
+      localStorage.setItem(CLK, JSON.stringify(customers));
       updateOrderBadge();
       if (document.getElementById('pg-orders') && document.getElementById('pg-orders').classList.contains('on')) {
         renderOrders();
