@@ -1996,6 +1996,19 @@ const PW_LOCK_KEY = 'baily_admin_lock';
 const MAX_TRIES   = 5;
 const LOCK_TIME   = 5 * 60 * 1000; // 5 minutes
 
+// Firestore security rules require a real authenticated user for admin
+// writes (products/customers/orders/settings). This signs the admin into
+// Firebase Auth using the SAME password typed into the panel's pw screen,
+// so there is still only one password to remember. Set up the matching
+// Firebase Auth user once in the console with this email and that password.
+const ADMIN_AUTH_EMAIL = 'albert.umcat@gmail.com';
+function adminFirebaseSignIn(password) {
+  if (!window.firebase || !firebase.auth) return;
+  firebase.auth().signInWithEmailAndPassword(ADMIN_AUTH_EMAIL, password)
+    .then(() => console.log('[BAILY] Admin autenticado en Firebase'))
+    .catch(e => console.warn('[BAILY] Firebase Auth sign-in falló — revisa que el usuario exista en Authentication con este email/contraseña:', e.message));
+}
+
 function getStoredPw() {
   // Sync with index.html password key
   return localStorage.getItem(PW_KEY) || localStorage.getItem('baily_admin_pw') || 'baily2026';
@@ -2021,6 +2034,7 @@ function checkPw() {
     sessionStorage.setItem('baily_admin_auth', '1');
     document.getElementById('pw-screen').style.display = 'none';
     document.getElementById('pw-inp').value = '';
+    adminFirebaseSignIn(inp);
     renderDash();
   } else {
     // Wrong
@@ -2101,6 +2115,12 @@ function changePw() {
   if (nw !== conf) { toast('Las contraseñas no coinciden', 'err'); return; }
   localStorage.setItem(PW_KEY, nw);
   localStorage.setItem('baily_admin_pw', nw); // sync with index
+  // Keep the Firebase Auth password in sync so admin writes keep working
+  if (window.firebase && firebase.auth && firebase.auth().currentUser) {
+    firebase.auth().currentUser.updatePassword(nw)
+      .then(() => console.log('[BAILY] Firebase Auth password actualizado'))
+      .catch(e => console.warn('[BAILY] No se pudo actualizar la contraseña en Firebase Auth — vuelve a iniciar sesión e intenta de nuevo:', e.message));
+  }
   toast('Contraseña cambiada exitosamente ✓', 'ok');
 }
 
