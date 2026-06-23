@@ -1211,14 +1211,20 @@ function onSearch(q){
     if(!val){clearSearch();hideSuggestions();return;}
     showSuggestions(val);
     // Full results view
+    const resultsSection=document.getElementById('search-results-section');
+    const wasHidden=resultsSection.style.display!=='block';
     document.getElementById('brands-section').style.display='none';
     document.getElementById('cats-section').style.display='none';
     document.getElementById('prods-section').style.display='none';
-    document.getElementById('search-results-section').style.display='block';
+    resultsSection.style.display='block';
     const res=smartSearch(val);
     document.getElementById('no-results').style.display=res.length?'none':'block';
     document.getElementById('search-grid').innerHTML=res.map(pCard).join('');
-    scrollToSection('search-results-section');
+    // Only auto-scroll the FIRST time results appear — re-scrolling on every
+    // keystroke while the user is still typing yanks the page back under
+    // their thumb, especially with the mobile keyboard open (felt as the
+    // page "getting stuck"/"jumping back").
+    if(wasHidden) scrollToSection('search-results-section');
   },180);
 }
 
