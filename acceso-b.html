@@ -1255,7 +1255,7 @@ function saveProds() {
     // Debounce: sync after 1.5 seconds of no changes
     clearTimeout(window._fbSyncTimer);
     window._fbSyncTimer = setTimeout(() => {
-      syncToCloud('products').catch(e => console.log('Auto-sync error:', e));
+      syncToCloud('products').catch(e => handleFireError(e, 'Auto-sync productos'));
     }, 1500);
   }
 }
@@ -1270,10 +1270,10 @@ function syncCatsBrandsToCloud(type) {
   window._fbCatsBrandsTimer = setTimeout(() => {
     try {
       if (type === 'categories') {
-        db.collection('settings').doc('categories').set(CATS).catch(e => console.log('Cat sync error:', e));
+        db.collection('settings').doc('categories').set(CATS).catch(e => handleFireError(e, 'Sync categorías'));
       } else if (type === 'brands') {
         const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
-        db.collection('settings').doc('brands').set(meta).catch(e => console.log('Brand sync error:', e));
+        db.collection('settings').doc('brands').set(meta).catch(e => handleFireError(e, 'Sync marcas'));
       }
     } catch(e) { console.log('syncCatsBrandsToCloud error:', e); }
   }, 1200);
@@ -2002,11 +2002,59 @@ const LOCK_TIME   = 5 * 60 * 1000; // 5 minutes
 // so there is still only one password to remember. Set up the matching
 // Firebase Auth user once in the console with this email and that password.
 const ADMIN_AUTH_EMAIL = 'albert.umcat@gmail.com';
+let _fbAuthUser = null;
+let _fbAuthChecked = false;
 function adminFirebaseSignIn(password) {
+  if (!window.firebase || !firebase.auth) return Promise.resolve(false);
+  return firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .catch(() => {})
+    .then(() => firebase.auth().signInWithEmailAndPassword(ADMIN_AUTH_EMAIL, password))
+    .then(() => { console.log('[BAILY] Admin autenticado en Firebase'); return true; })
+    .catch(e => { console.warn('[BAILY] Firebase Auth sign-in falló — revisa que el usuario exista en Authentication con este email/contraseña:', e.message); return false; });
+}
+
+// Track real Firebase Auth state independently of the local pw-screen
+// sessionStorage flag. Mobile browsers / installed PWAs sometimes drop the
+// persisted Firebase session (storage limits, app restarts) even though the
+// admin never "logged out" of Baily's own screen — in that case every write
+// silently fails with "permission-denied" unless we catch it and force a
+// fresh sign-in.
+function watchFirebaseAuth() {
   if (!window.firebase || !firebase.auth) return;
-  firebase.auth().signInWithEmailAndPassword(ADMIN_AUTH_EMAIL, password)
-    .then(() => console.log('[BAILY] Admin autenticado en Firebase'))
-    .catch(e => console.warn('[BAILY] Firebase Auth sign-in falló — revisa que el usuario exista en Authentication con este email/contraseña:', e.message));
+  firebase.auth().onAuthStateChanged(user => {
+    _fbAuthUser = user;
+    _fbAuthChecked = true;
+    if (!user && sessionStorage.getItem('baily_admin_auth') === '1') {
+      // Locally "logged in" but Firebase session is gone — ask again.
+      showReauthPrompt();
+    }
+  });
+}
+
+let _reauthShowing = false;
+function showReauthPrompt() {
+  if (_reauthShowing) return;
+  _reauthShowing = true;
+  toast('⚠️ Sesión de Firebase perdida — vuelve a iniciar sesión para poder guardar cambios', 'err');
+  const scr = document.getElementById('pw-screen');
+  if (scr) {
+    scr.style.display = 'flex';
+    const inp = document.getElementById('pw-inp');
+    if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 100); }
+  }
+  _reauthShowing = false;
+}
+
+// If a Firestore write fails with permission-denied, the most likely cause
+// is exactly the lost-session case above. Surface it clearly instead of a
+// silent console error.
+function handleFireError(e, ctx) {
+  console.log((ctx || 'Firestore') + ' error:', e && e.message);
+  if (e && (e.code === 'permission-denied' || /insufficient|permission/i.test(e.message || ''))) {
+    showReauthPrompt();
+  } else {
+    toast('Error guardando en la nube: ' + (e && e.message || 'desconocido'), 'err');
+  }
 }
 
 function getStoredPw() {
@@ -2034,7 +2082,9 @@ function checkPw() {
     sessionStorage.setItem('baily_admin_auth', '1');
     document.getElementById('pw-screen').style.display = 'none';
     document.getElementById('pw-inp').value = '';
-    adminFirebaseSignIn(inp);
+    adminFirebaseSignIn(inp).then(ok => {
+      if (!ok) toast('⚠️ No se pudo conectar con Firebase — revisa el usuario en Authentication. Los cambios no se guardarán en la nube hasta resolverlo.', 'err');
+    });
     renderDash();
   } else {
     // Wrong
@@ -3037,6 +3087,7 @@ function initFirebase(config) {
     db = firebase.firestore();
     fbReady = true;
     initStorage();
+    watchFirebaseAuth();
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -3279,8 +3330,8 @@ async function syncToCloud(type) {
     toast(`✅ ${type} sincronizado`, 'ok');
   } catch(e) {
     fbLog(`❌ Error subiendo ${type}: ${e.message}`);
-    toast('Error: ' + e.message, 'err');
     console.error('syncToCloud error:', e);
+    handleFireError(e, 'syncToCloud:' + type);
   }
 }
 

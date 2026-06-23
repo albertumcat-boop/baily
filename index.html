@@ -761,6 +761,40 @@ async function loadCFGFromFirestore() {
 
 // Firebase config for store (read-only access to products)
 var _storeDb = null;
+const _PENDING_ORDERS_KEY = 'baily_pending_orders';
+function _getPendingOrders(){ try{ return JSON.parse(localStorage.getItem(_PENDING_ORDERS_KEY)||'[]'); }catch(e){ return []; } }
+function _savePendingOrders(list){ localStorage.setItem(_PENDING_ORDERS_KEY, JSON.stringify(list)); }
+function pushOrderToCloud(order){
+  if(!_storeDb){
+    // Firebase not ready yet (slow network on load) — queue it.
+    const pending = _getPendingOrders();
+    if(!pending.find(o=>o.id===order.id)){ pending.push(order); _savePendingOrders(pending); }
+    return;
+  }
+  _storeDb.collection('orders').doc(order.id).set(order)
+    .then(()=>{
+      console.log('[BAILY Store] Pedido enviado a Firestore');
+      _savePendingOrders(_getPendingOrders().filter(o=>o.id!==order.id));
+    })
+    .catch(e=>{
+      console.log('[BAILY Store] Error enviando pedido, se reintentará:',e.message);
+      const pending = _getPendingOrders();
+      if(!pending.find(o=>o.id===order.id)){ pending.push(order); _savePendingOrders(pending); }
+    });
+}
+function flushPendingOrders(){
+  if(!_storeDb) return;
+  const pending = _getPendingOrders();
+  if(!pending.length) return;
+  pending.forEach(order=>{
+    _storeDb.collection('orders').doc(order.id).set(order)
+      .then(()=>{
+        console.log('[BAILY Store] Pedido pendiente sincronizado:', order.id);
+        _savePendingOrders(_getPendingOrders().filter(o=>o.id!==order.id));
+      })
+      .catch(e=>console.log('[BAILY Store] Reintento de pedido falló:', e.message));
+  });
+}
 (function initStoreFirebase() {
   try {
     var cfg = {
@@ -1989,12 +2023,11 @@ _(Tasa BCV: ${tasa.toLocaleString('es-VE',{minimumFractionDigits:2})})_`;
   const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
   orders.unshift(order);localStorage.setItem('baily_orders',JSON.stringify(orders));
 
-  // Send the order to Firestore so it shows up in the admin "Pedidos" panel
-  if(_storeDb){
-    _storeDb.collection('orders').doc(order.id).set(order)
-      .then(()=>console.log('[BAILY Store] Pedido enviado a Firestore'))
-      .catch(e=>console.log('[BAILY Store] Error enviando pedido:',e.message));
-  }
+  // Send the order to Firestore so it shows up in the admin "Pedidos" panel.
+  // On flaky mobile connections this can silently fail (or _storeDb may not
+  // be ready yet) — if so, queue the order and keep retrying instead of
+  // losing it.
+  pushOrderToCloud(order);
 
   window.open(`https://wa.me/${CFG.wa}?text=${encodeURIComponent(msg)}`,'_blank');
   cart=[];saveCart();closeCO();closeCart();
@@ -2049,7 +2082,10 @@ setTimeout(async () => {
   renderBlog();
   // Run fetchTasaBCV LAST so live rate always wins over anything from Firestore
   fetchTasaBCV();
+  flushPendingOrders();
 }, 800);
+window.addEventListener('online', flushPendingOrders);
+setInterval(flushPendingOrders, 30000);
 
 
 // ═══════════════════════════════════════════
