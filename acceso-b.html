@@ -1250,18 +1250,27 @@ function saveProds() {
     });
     try { localStorage.setItem(IK, JSON.stringify(stripped)); } catch(e2) { console.error('[BAILY] Cannot save to localStorage:', e2); }
   }
-  // Auto-sync individual product change to Firebase (background)
+  // Auto-sync to Firebase — debounced 1.5s
+  // If Firebase not ready yet, mark as pending so initFirebase() lo retoma
   if (fbReady && db && window._fbAutoSync !== false) {
-    // Debounce: sync after 1.5 seconds of no changes
     clearTimeout(window._fbSyncTimer);
     window._fbSyncTimer = setTimeout(() => {
       syncToCloud('products').catch(e => handleFireError(e, 'Auto-sync productos'));
     }, 1500);
+  } else {
+    window._pendingProdSync = true;
   }
 }
 function saveCats()   { localStorage.setItem(CATK, JSON.stringify(CATS)); syncCatsBrandsToCloud('categories'); }
 function saveBrands() { localStorage.setItem(BRK,  JSON.stringify(BRANDS)); syncCatsBrandsToCloud('brands'); }
-function saveCfg()    { localStorage.setItem(CK,   JSON.stringify(CFG)); }
+function saveCfg() {
+  localStorage.setItem(CK, JSON.stringify(CFG));
+  // BUG 6 fix: auto-sync configuración a Firestore (debounced)
+  if (fbReady && db) {
+    clearTimeout(window._fbCfgTimer);
+    window._fbCfgTimer = setTimeout(() => syncToCloud('settings').catch(e => handleFireError(e, 'Auto-sync config')), 1500);
+  }
+}
 
 // Auto-sync category/brand photos to Firestore so they appear on every device
 function syncCatsBrandsToCloud(type) {
@@ -2306,20 +2315,27 @@ function confirmOrder(orderId) {
   ord.items.forEach(item => {
     const p = PRODUCTS.find(x => x.id === (item.realId || item.productId));
     if (p) {
-      if (Array.isArray(p.tones) && item.toneIdx !== undefined && p.tones[item.toneIdx]) {
-        const tone = p.tones[item.toneIdx];
-        const prevT = +tone.stock || 0;
-        tone.stock = Math.max(0, prevT - item.qty);
-        if (prevT < item.qty) {
-          stockWarnings.push(`${item.name}: solo había ${prevT}, se vendieron ${item.qty}`);
+      if (Array.isArray(p.tones) && p.tones.length > 0) {
+        // BUG 3 fix: buscar tono por índice primero, luego por nombre como fallback
+        let tone = null;
+        if (item.toneIdx !== undefined && p.tones[item.toneIdx]) {
+          tone = p.tones[item.toneIdx];
+        } else if (item.toneName) {
+          tone = p.tones.find(t => t.name && t.name.toLowerCase() === item.toneName.toLowerCase());
         }
-        p.stock = p.tones.reduce((s, t) => s + (+t.stock || 0), 0);
+        if (tone) {
+          const prevT = +tone.stock || 0;
+          tone.stock = Math.max(0, prevT - item.qty);
+          if (prevT < item.qty) stockWarnings.push(`${item.name} (${tone.name}): solo había ${prevT}, se vendieron ${item.qty}`);
+          p.stock = p.tones.reduce((s, t) => s + (+t.stock || 0), 0);
+        } else {
+          // No se pudo identificar el tono — advertir pero NO descontar del total
+          stockWarnings.push(`${item.name}: no se identificó el tono — stock NO descontado, revisa manualmente`);
+        }
       } else {
         const prev = +p.stock || 0;
         p.stock = Math.max(0, prev - item.qty);
-        if (prev < item.qty) {
-          stockWarnings.push(`${item.name}: solo había ${prev}, se vendieron ${item.qty}`);
-        }
+        if (prev < item.qty) stockWarnings.push(`${item.name}: solo había ${prev}, se vendieron ${item.qty}`);
       }
     }
   });
@@ -2330,6 +2346,12 @@ function confirmOrder(orderId) {
   ord.confirmedAt = new Date().toLocaleString('es-VE');
   saveOrders(orders);
   renderOrders();
+  // BUG 4 fix: sincronizar stock y pedido a Firestore inmediatamente (no depender del debounce)
+  if (fbReady && db) {
+    db.collection('orders').doc(orderId).update({ status: 'confirmed', confirmedAt: ord.confirmedAt })
+      .catch(e => handleFireError(e, 'Confirmar pedido en nube'));
+    syncToCloud('products').catch(e => handleFireError(e, 'Sync stock post-venta'));
+  }
 
   if (stockWarnings.length > 0) {
     toast(`✅ Venta confirmada. ⚠️ Stock insuficiente en: ${stockWarnings.join(', ')}`, 'ok');
@@ -3088,6 +3110,11 @@ function initFirebase(config) {
     fbReady = true;
     initStorage();
     watchFirebaseAuth();
+    // BUG 2 fix: si saveProds() corrió antes de que Firebase estuviera listo, sincronizar ahora
+    if (window._pendingProdSync) {
+      window._pendingProdSync = false;
+      setTimeout(() => syncToCloud('products').catch(e => handleFireError(e, 'Auto-sync pendiente')), 1000);
+    }
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
@@ -3114,6 +3141,12 @@ const _REAL_FB_CFG = {
     localStorage.setItem(FB_CFG_KEY, JSON.stringify(_REAL_FB_CFG));
   }
   initFirebase(cfg);
+  // BUG 1 fix: si localStorage estaba vacío o con productos por defecto, bajar desde Firestore
+  setTimeout(() => {
+    if (fbReady && db && (!Array.isArray(PRODUCTS) || PRODUCTS.length === 0 || PRODUCTS[0].id === 'p0001')) {
+      syncFromCloud('products').catch(() => {});
+    }
+  }, 2000);
   // Pull any new orders placed by customers from the storefront
   setTimeout(pullNewOrdersFromCloud, 1500);
   setInterval(pullNewOrdersFromCloud, 60000);

@@ -826,7 +826,12 @@ async function loadProdsFromFirestore() {
   try {
     console.log('[BAILY Store] Cargando productos desde Firestore...');
     const snap = await _storeDb.collection('products').get();
-    if (snap.empty) { console.log('[BAILY Store] No hay productos en Firestore'); return; }
+    if (snap.empty) {
+      console.log('[BAILY Store] No hay productos en Firestore');
+      document.getElementById('no-results') && (document.getElementById('no-results').style.display = 'block');
+      document.getElementById('no-results') && (document.getElementById('no-results').innerHTML = '😔 El catálogo no está disponible en este momento. Intenta más tarde.');
+      return;
+    }
     const cloudProds = snap.docs.map(d => ({id: d.id, ...d.data()}));
     // Merge: cloud data wins over local defaults, keep local images if cloud has none
     cloudProds.forEach(cp => {
