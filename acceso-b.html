@@ -730,7 +730,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
               Los cambios de stock, precios y clientes se sincronizan automáticamente.
             </div>
             <div class="g2-8">
-              <button class="btn bp btn-sm" onclick="syncToCloud('products')"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
+              <button class="btn bp btn-sm" onclick="syncToCloud('products').then(()=>publishCatalogSnapshot())"><i class="fa-solid fa-upload"></i> Subir Inventario</button>
               <button class="btn bs btn-sm" onclick="syncFromCloud('products')"><i class="fa-solid fa-download"></i> Bajar Inventario</button>
               <button class="btn bp btn-sm" onclick="syncToCloud('customers')"><i class="fa-solid fa-upload"></i> Subir Clientes</button>
               <button class="btn bs btn-sm" onclick="syncFromCloud('customers')"><i class="fa-solid fa-download"></i> Bajar Clientes</button>
@@ -1265,7 +1265,9 @@ function saveProds() {
   if (fbReady && db && window._fbAutoSync !== false) {
     clearTimeout(window._fbSyncTimer);
     window._fbSyncTimer = setTimeout(() => {
-      syncToCloud('products').catch(e => handleFireError(e, 'Auto-sync productos'));
+      syncToCloud('products')
+        .then(() => publishCatalogSnapshot())
+        .catch(e => handleFireError(e, 'Auto-sync productos'));
     }, 1500);
   } else {
     window._pendingProdSync = true;
@@ -3486,6 +3488,27 @@ async function syncToCloud(type) {
   }
 }
 
+// Publica un snapshot comprimido del catálogo en settings/catalog
+// La tienda lo escucha con onSnapshot → 1 lectura por visitante en vez de N lecturas (una por producto)
+async function publishCatalogSnapshot() {
+  if (!fbReady || !db) return;
+  try {
+    // Strip base64 images (Firestore 1MB limit por documento)
+    const slim = PRODUCTS.map(p => {
+      const d = {...p};
+      if (d.img && d.img.startsWith('data:')) d.img = '';
+      if (Array.isArray(d.imgs)) d.imgs = d.imgs.filter(u => u && u.startsWith('http'));
+      return d;
+    });
+    await db.collection('settings').doc('catalog').set({
+      products: slim,
+      updatedAt: Date.now()
+    });
+    console.log('[BAILY Admin] Catálogo publicado (' + slim.length + ' productos)');
+  } catch(e) {
+    console.warn('[BAILY Admin] Error publicando catálogo:', e.message);
+  }
+}
 
 async function syncFromCloud(type) {
   if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
@@ -3567,6 +3590,7 @@ async function syncAllToCloud() {
   fbLog('🚀 Iniciando sincronización completa...');
   await syncToCloud('settings');
   await syncToCloud('products');
+  await publishCatalogSnapshot();
   await syncToCloud('customers');
   await syncToCloud('orders');
   await syncToCloud('promos');

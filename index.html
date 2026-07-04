@@ -684,7 +684,7 @@ var _selTone=null;
     </div>
     <div class="co-actions">
       <button class="co-cancel" onclick="closeCO()">Cancelar</button>
-      <button class="co-btn" onclick="submitOrder()"><i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp</button>
+      <button class="co-btn" id="co-submit-btn" onclick="submitOrder()"><i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp</button>
     </div>
   </div>
 </div>
@@ -820,39 +820,40 @@ function loadProds(){
 }
 let PRODUCTS = loadProds();
 
-// Load fresh products from Firestore and refresh the store
-async function loadProdsFromFirestore() {
-  if (!_storeDb) return;
-  try {
-    console.log('[BAILY Store] Cargando productos desde Firestore...');
-    const snap = await _storeDb.collection('products').get();
-    if (snap.empty) {
-      console.log('[BAILY Store] No hay productos en Firestore');
-      document.getElementById('no-results') && (document.getElementById('no-results').style.display = 'block');
-      document.getElementById('no-results') && (document.getElementById('no-results').innerHTML = '😔 El catálogo no está disponible en este momento. Intenta más tarde.');
+// Escucha settings/catalog con onSnapshot — 1 lectura por visitante en vez de N (una por producto)
+// Cada vez que el admin guarda, Firestore empuja el cambio a todos los clientes en segundos
+var _catalogUnsub = null;
+function subscribeCatalog() {
+  if (!_storeDb || _catalogUnsub) return;
+  _catalogUnsub = _storeDb.collection('settings').doc('catalog').onSnapshot(doc => {
+    if (!doc.exists) {
+      console.log('[BAILY Store] settings/catalog no existe aún — el admin debe guardar productos al menos una vez');
       return;
     }
-    const cloudProds = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    // Merge: cloud data wins over local defaults, keep local images if cloud has none
-    cloudProds.forEach(cp => {
-      const local = PRODUCTS.find(p => p.id === cp.id);
-      if (local && !cp.img && local.img) cp.img = local.img;
-      if (local && (!cp.imgs || !cp.imgs.length) && local.imgs && local.imgs.length) cp.imgs = local.imgs;
-    });
+    const data = doc.data();
+    const cloudProds = Array.isArray(data.products) ? data.products : [];
+    if (!cloudProds.length) return;
     PRODUCTS = cloudProds;
     localStorage.setItem(IK, JSON.stringify(PRODUCTS));
-    console.log('[BAILY Store] ' + PRODUCTS.length + ' productos cargados desde Firestore');
-    // Refresh the visible UI
+    console.log('[BAILY Store] Catálogo actualizado — ' + PRODUCTS.length + ' productos');
     if (selCat) renderProds();
     else if (selBrand) renderCats(selBrand);
     else renderBrands();
-    // Refresh search if active
     const srchVal = document.getElementById('srch-inp') && document.getElementById('srch-inp').value;
     if (srchVal && srchVal.trim()) onSearch(srchVal);
-  } catch(e) {
-    console.log('[BAILY Store] Error cargando desde Firestore:', e.message);
-  }
+    // Actualizar precios del carrito si algún producto cambió de precio
+    let cartChanged = false;
+    cart.forEach(item => {
+      const p = PRODUCTS.find(x => x.id === (item.realId || item.productId));
+      if (p && p.price !== item.price) { item.price = p.price; cartChanged = true; }
+    });
+    if (cartChanged) { saveCart(); renderCart(); }
+  }, e => {
+    console.log('[BAILY Store] Error en listener de catálogo:', e.message);
+  });
 }
+// Mantener compatibilidad con código que llama loadProdsFromFirestore directamente
+function loadProdsFromFirestore() { subscribeCatalog(); return Promise.resolve(); }
 
 // Load category & brand photos/data from Firestore (admin edits sync here)
 async function loadCatsBrandsFromFirestore() {
@@ -1951,7 +1952,7 @@ function lookupCustomer(){
   }
 }
 
-function submitOrder(){
+async function submitOrder(){
   const name=document.getElementById('co-name').value.trim();
   const cedula=document.getElementById('co-cedula').value.trim();
   const email=document.getElementById('co-email').value.trim();
@@ -1960,6 +1961,83 @@ function submitOrder(){
   if(!name){toast('⚠️ Ingresa tu nombre completo','err');return;}
   if(!cedula){toast('⚠️ Ingresa tu cédula','err');return;}
   if(!email){toast('⚠️ Ingresa tu correo electrónico','err');return;}
+
+  // Verificar y reservar stock en Firestore mediante transacción atómica
+  // Si dos clientes intentan comprar el último producto al mismo tiempo,
+  // solo uno pasa — el otro recibe un mensaje claro antes de abrir WhatsApp.
+  if(_storeDb){
+    const btn=document.getElementById('co-submit-btn');
+    if(btn){btn.disabled=true;btn.textContent='Verificando stock...';}
+    try {
+      await _storeDb.runTransaction(async tx => {
+        // Leer stock actual de cada producto del carrito
+        const prodRefs = [...new Set(cart.map(i => i.realId||i.productId))]
+          .map(id => _storeDb.collection('products').doc(id));
+        const prodDocs = await Promise.all(prodRefs.map(r => tx.get(r)));
+        const prodMap = {};
+        prodDocs.forEach(d => { if(d.exists) prodMap[d.id] = d.data(); });
+
+        // Verificar disponibilidad de cada ítem
+        const errors = [];
+        cart.forEach(item => {
+          const pid = item.realId || item.productId;
+          const p = prodMap[pid];
+          if(!p){ errors.push(`${item.name}: producto no encontrado`); return; }
+          if(Array.isArray(p.tones) && p.tones.length > 0){
+            // Producto con tonos: buscar por índice, luego por nombre
+            let tone = null;
+            if(item.toneIdx !== undefined && p.tones[item.toneIdx]) tone = p.tones[item.toneIdx];
+            else if(item.toneName) tone = p.tones.find(t => t.name && t.name.toLowerCase()===item.toneName.toLowerCase());
+            if(!tone){ errors.push(`${item.name}: no se identificó el tono — intenta de nuevo`); return; }
+            if((+tone.stock||0) < item.qty){
+              const avail = +tone.stock||0;
+              errors.push(`${item.name} (${tone.name}): solo quedan ${avail} unidad${avail!==1?'es':''}`);
+            }
+          } else {
+            if((+p.stock||0) < item.qty){
+              const avail = +p.stock||0;
+              errors.push(`${item.name}: solo quedan ${avail} unidad${avail!==1?'es':''}`);
+            }
+          }
+        });
+        if(errors.length > 0) throw new Error('STOCK_INSUFICIENTE:' + errors.join('||'));
+
+        // Stock suficiente — descontar en Firestore dentro de la misma transacción
+        cart.forEach(item => {
+          const pid = item.realId || item.productId;
+          const p = JSON.parse(JSON.stringify(prodMap[pid]));
+          const ref = _storeDb.collection('products').doc(pid);
+          if(Array.isArray(p.tones) && p.tones.length > 0){
+            let tone = null;
+            if(item.toneIdx !== undefined && p.tones[item.toneIdx]) tone = p.tones[item.toneIdx];
+            else if(item.toneName) tone = p.tones.find(t => t.name && t.name.toLowerCase()===item.toneName.toLowerCase());
+            if(tone){
+              tone.stock = Math.max(0, (+tone.stock||0) - item.qty);
+              p.stock = p.tones.reduce((s,t) => s+(+t.stock||0), 0);
+            }
+          } else {
+            p.stock = Math.max(0, (+p.stock||0) - item.qty);
+          }
+          tx.update(ref, { stock: p.stock, tones: p.tones || [] });
+          // Actualizar también en memoria local
+          const local = PRODUCTS.find(x => x.id === pid);
+          if(local){ local.stock = p.stock; if(p.tones) local.tones = p.tones; }
+        });
+      });
+      localStorage.setItem(IK, JSON.stringify(PRODUCTS));
+    } catch(e) {
+      if(btn){btn.disabled=false;btn.textContent='Confirmar pedido';}
+      if(e.message && e.message.startsWith('STOCK_INSUFICIENTE:')){
+        const msgs = e.message.replace('STOCK_INSUFICIENTE:','').split('||');
+        toast('⚠️ ' + msgs.join(' · '), 'err');
+      } else {
+        // Firebase falló (sin conexión, etc.) — dejar pasar sin bloquear
+        console.warn('[BAILY Store] Transacción de stock falló, continuando sin verificación:', e.message);
+      }
+      if(e.message && e.message.startsWith('STOCK_INSUFICIENTE:')) return;
+    }
+    if(btn){btn.disabled=false;btn.textContent='Confirmar pedido';}
+  }
 
   // Save/update customer
   CUSTOMERS=JSON.parse(localStorage.getItem(CLK)||'[]');
