@@ -893,6 +893,7 @@ let srchTimer=null, deliveryMap=null, deliveryMarker=null;
 let selShipMode='delivery'; // delivery | nacional | retiro
 let selAddress=null, selLat=null, selLng=null;
 let selAgency=null, selAgencyNum='';
+let appliedCoupon=null; // { code, pct, usedCount, uses, active }
       detectZoneFromAddress(null, selLat);
 
 // ═══════════════════════════════════════════
@@ -1387,6 +1388,22 @@ function closeCart(){
   document.body.style.overflow='';
   if(location.hash==='#carrito') history.back();
 }
+function applyCoupon(){
+  const code=(document.getElementById('coupon-inp')?.value||'').trim().toUpperCase();
+  if(!code){return;}
+  const coupons=Array.isArray(CFG.coupons)?CFG.coupons:[];
+  const found=coupons.find(c=>c.code===code);
+  if(!found){toast('Código no válido','err');return;}
+  if(!found.active){toast('Este código está inactivo','err');return;}
+  if(found.uses>0 && (found.usedCount||0)>=found.uses){toast('Este código ya alcanzó su límite de usos','err');return;}
+  appliedCoupon=found;
+  toast('Código '+code+' aplicado — '+found.pct+'% de descuento ✓','ok');
+  renderCart();
+}
+function removeCoupon(){
+  appliedCoupon=null;
+  renderCart();
+}
 
 function renderCart(){
   // Read config fresh from localStorage
@@ -1417,7 +1434,8 @@ function renderCart(){
   </div>`).join('');
 
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
+  const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
+  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
@@ -1550,9 +1568,19 @@ function renderCart(){
       Coordinar horario por WhatsApp · Sin costo adicional
     </div>
 
+    <!-- CÓDIGO DE DESCUENTO -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+      <input id="coupon-inp" type="text" placeholder="Código de descuento" style="flex:1;border:1.5px solid var(--mp);border-radius:var(--r);padding:8px 10px;font-size:13px;font-family:inherit;text-transform:uppercase"
+        value="${appliedCoupon?appliedCoupon.code:''}" ${appliedCoupon?'disabled':''}>
+      ${appliedCoupon
+        ? `<button onclick="removeCoupon()" style="padding:8px 12px;background:var(--err);color:#fff;border:none;border-radius:var(--r);font-size:12px;cursor:pointer">✕ Quitar</button>`
+        : `<button onclick="applyCoupon()" style="padding:8px 12px;background:var(--mauve);color:#fff;border:none;border-radius:var(--r);font-size:12px;cursor:pointer">Aplicar</button>`}
+    </div>
     <!-- TOTALES -->
     <div class="c-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
-    ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct??35}%)</span><span>−$${desc.toFixed(2)}</span></div>`:''}
+    ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct??35}%)</span><span>−$${desc.toFixed(2)}</span></div>`
+      :(appliedCoupon?`<div class="c-row disc"><span>Descuento código ${appliedCoupon.code} (${appliedCoupon.pct}%)</span><span>−$${desc.toFixed(2)}</span></div>`:'')
+    }
     ${selShipMode!=='retiro'?`<div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>`:''}
     
     <div class="c-row tot">
@@ -1794,7 +1822,8 @@ function initDeliveryMap(){
       res.style.display='block';
       if(dist<=radius){
         const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-        const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
+        const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
+        const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
         const subD=sub-desc;
         const free=subD>=(CFG.freeThreshold??30);
         res.className='map-result map-ok';
@@ -1947,7 +1976,8 @@ function submitOrder(){
 
   // Build WhatsApp message
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:0;
+  const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
+  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
@@ -2013,8 +2043,8 @@ function submitOrder(){
   msg+=`
 
 💰 Subtotal: $${sub.toFixed(2)}`;
-  if(CFG.descActive) msg+=`
-🎉 Descuento: -$${desc.toFixed(2)}`;
+  if(CFG.descActive||appliedCoupon) msg+=`
+🎉 Descuento${appliedCoupon?' ('+appliedCoupon.code+')':''}: -$${desc.toFixed(2)}`;
   if(envio>0) msg+=`
 🏍️ Delivery: $${envio.toFixed(2)}`;
   
@@ -2030,7 +2060,16 @@ _(Tasa BCV: ${tasa.toLocaleString('es-VE',{minimumFractionDigits:2})})_`;
   // Save pending order
   const order={id:'ord'+Date.now(),date:new Date().toLocaleString('es-VE'),customer:{name,cedula,email,tel},
     items:cart.map(i=>({...i})),sub:+sub.toFixed(2),desc:+desc.toFixed(2),envio:+envio.toFixed(2),total:+total.toFixed(2),totalBs:+(total*tasa).toFixed(2),
-    tasaBCV:tasa,shipMode:selShipMode,address:selAddress,lat:selLat,lng:selLng,status:'pending'};
+    tasaBCV:tasa,shipMode:selShipMode,address:selAddress,lat:selLat,lng:selLng,status:'pending',
+    couponCode:appliedCoupon?appliedCoupon.code:null};
+  // Marcar cupón como usado (incrementar contador en Firestore vía settings)
+  if(appliedCoupon && _storeDb){
+    const coupons=Array.isArray(CFG.coupons)?CFG.coupons:[];
+    const idx=coupons.findIndex(c=>c.code===appliedCoupon.code);
+    if(idx>=0){ coupons[idx].usedCount=(coupons[idx].usedCount||0)+1; CFG.coupons=coupons; }
+    _storeDb.collection('settings').doc('general').update({coupons}).catch(()=>{});
+  }
+  appliedCoupon=null;
   const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
   orders.unshift(order);localStorage.setItem('baily_orders',JSON.stringify(orders));
 

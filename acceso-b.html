@@ -784,6 +784,16 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
           <h3><i class="fa-solid fa-dollar-sign" style="color:var(--mauve);margin-right:6px"></i>Precios & Tasa</h3>
           <div class="srow"><span class="slbl">Tasa BCV (Bs por $)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-tasa" style="width:85px;height:34px" step="0.01"><button class="btn bp btn-sm" onclick="saveSF('tasaBCV','s-tasa',true)">Guardar</button></div></div>
           <div class="srow"><span class="slbl">Descuento activo (%)</span><div style="display:flex;gap:8px;align-items:center"><label class="tg"><input type="checkbox" id="s-don"><span class="tg-sl"></span></label><input class="finp" type="number" id="s-dpct" style="width:60px;height:34px"><button class="btn bp btn-sm" onclick="saveDisc()">Guardar</button></div></div>
+          <div class="srow" style="flex-direction:column;align-items:flex-start;gap:10px">
+            <span class="slbl">Códigos de descuento</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <input class="finp" type="text" id="c-code" placeholder="CODIGO" style="width:110px;height:34px;text-transform:uppercase">
+              <input class="finp" type="number" id="c-pct" placeholder="%" min="1" max="100" style="width:60px;height:34px">
+              <input class="finp" type="number" id="c-uses" placeholder="Usos (0=∞)" min="0" style="width:90px;height:34px">
+              <button class="btn bp btn-sm" onclick="addCoupon()"><i class="fa-solid fa-plus"></i> Agregar</button>
+            </div>
+            <div id="coupons-list" style="width:100%"></div>
+          </div>
         </div>
         <div class="sc">
           <h3><i class="fa-solid fa-truck" style="color:var(--mauve);margin-right:6px"></i>Delivery & Contacto</h3>
@@ -1175,7 +1185,7 @@ const RESTRICTED_ZONES_BASE = [
 ];
 
 const CFG_DEFAULT = {
-  tasaBCV: 47.15,  descPct: 35, descActive: false,
+  tasaBCV: 47.15,  descPct: 35, descActive: false, coupons: [],
   deliveryCost: 3, freeThreshold: 30, wa: '+584242655274',
   restrictedZones: RESTRICTED_ZONES_BASE,
   agencies: [
@@ -1387,31 +1397,60 @@ function renderInv() {
   invPage = Math.min(invPage, pages);
   const sl = list.slice((invPage - 1) * INV_PER, invPage * INV_PER);
 
-  document.getElementById('inv-tb').innerHTML = sl.map(p => `<tr>
-    <td><div class="tnm">${p.name}</div><div class="tbr">${p.brand}</div></td>
-    <td>${p.brand}</td>
-    <td style="font-size:11px;color:var(--ts)">${p.category || p.catId || ''}</td>
-    <td>
-      <div class="ie">
-        <span class="sn ${(+p.stock||0)===0?'sout':(+p.stock||0)<=3?'slow':'sok'}">${p.stock||0}</span>
-        <input class="nf" type="number" value="${p.stock||0}" id="sf-${p.id}" min="0" onkeydown="if(event.key==='Enter')setSt('${p.id}')">
-        <button class="mb ok" onclick="setSt('${p.id}')">✓</button>
-      </div>
-    </td>
-    <td>
-      <div class="ie">
-        <input class="nf" type="number" placeholder="+0" id="ad-${p.id}" min="1" style="width:50px">
-        <button class="mb add" onclick="addSt('${p.id}')">+</button>
-      </div>
-    </td>
-    <td>
-      <div class="ie">
-        <input class="pf" type="number" value="${(+p.price||0).toFixed(2)}" id="pf-${p.id}" step="0.01">
-        <button class="mb ok" onclick="setPr('${p.id}')">✓</button>
-      </div>
-    </td>
-    <td style="font-size:11px;color:var(--tl)">Bs ${((+p.price||0)*(CFG.tasaBCV??47.15)).toFixed(2)}</td>
-  </tr>`).join('');
+  document.getElementById('inv-tb').innerHTML = sl.map(p => {
+    const hasTones = Array.isArray(p.tones) && p.tones.length > 0;
+    // Stock total de tonos (fuente de verdad si tiene tonos)
+    const stockDisplay = hasTones
+      ? p.tones.reduce((s, t) => s + (+t.stock || 0), 0)
+      : (+p.stock || 0);
+    const cls = stockDisplay === 0 ? 'sout' : stockDisplay <= 3 ? 'slow' : 'sok';
+    // Filas de tonos
+    const toneRows = hasTones ? p.tones.map((t, ti) => {
+      const ts = +t.stock || 0;
+      const tc = ts === 0 ? 'sout' : ts <= 3 ? 'slow' : 'sok';
+      return `<tr style="background:var(--cream2)">
+        <td style="padding-left:24px;font-size:11px;color:var(--ts)">↳ ${t.name||'Tono '+(ti+1)}</td>
+        <td></td><td></td>
+        <td><div class="ie">
+          <span class="sn ${tc}">${ts}</span>
+          <input class="nf" type="number" value="${ts}" id="sf-${p.id}-t${ti}" min="0" style="width:52px" onkeydown="if(event.key==='Enter')setToneSt('${p.id}',${ti})">
+          <button class="mb ok" onclick="setToneSt('${p.id}',${ti})">✓</button>
+        </div></td>
+        <td><div class="ie">
+          <input class="nf" type="number" placeholder="+0" id="ad-${p.id}-t${ti}" min="1" style="width:50px">
+          <button class="mb add" onclick="addToneSt('${p.id}',${ti})">+</button>
+        </div></td>
+        <td colspan="2"></td>
+      </tr>`;
+    }).join('') : '';
+    return `<tr>
+      <td><div class="tnm">${p.name}</div><div class="tbr">${p.brand}</div></td>
+      <td>${p.brand}</td>
+      <td style="font-size:11px;color:var(--ts)">${p.category || p.catId || ''}</td>
+      <td>
+        <div class="ie">
+          <span class="sn ${cls}">${stockDisplay}</span>
+          ${hasTones
+            ? `<span style="font-size:10px;color:var(--ts);margin-left:4px">suma tonos ↓</span>`
+            : `<input class="nf" type="number" value="${+p.stock||0}" id="sf-${p.id}" min="0" onkeydown="if(event.key==='Enter')setSt('${p.id}')">
+               <button class="mb ok" onclick="setSt('${p.id}')">✓</button>`}
+        </div>
+      </td>
+      <td>
+        ${hasTones ? '' : `<div class="ie">
+          <input class="nf" type="number" placeholder="+0" id="ad-${p.id}" min="1" style="width:50px">
+          <button class="mb add" onclick="addSt('${p.id}')">+</button>
+        </div>`}
+      </td>
+      <td>
+        <div class="ie">
+          <input class="pf" type="number" value="${(+p.price||0).toFixed(2)}" id="pf-${p.id}" step="0.01">
+          <button class="mb ok" onclick="setPr('${p.id}')">✓</button>
+        </div>
+      </td>
+      <td style="font-size:11px;color:var(--tl)">Bs ${((+p.price||0)*(CFG.tasaBCV??47.15)).toFixed(2)}</td>
+    </tr>${toneRows}`;
+  }).join('');
 
   let ph = '';
   if (pages > 1) {
@@ -1432,15 +1471,31 @@ function setSt(id) {
   const p = PRODUCTS.find(x => x.id === id);
   const v = parseInt(document.getElementById('sf-'+id).value);
   if (!p || isNaN(v) || v < 0) { toast('Valor inválido', 'err'); return; }
+  if (Array.isArray(p.tones) && p.tones.length > 0) {
+    toast('Este producto tiene tonos — ajusta cada tono por separado ↓', 'err'); return;
+  }
   p.stock = v; saveProds(); renderInv(); toast('Stock actualizado ✓', 'ok');
 }
 function addSt(id) {
   const p = PRODUCTS.find(x => x.id === id);
   const v = parseInt(document.getElementById('ad-'+id).value);
   if (!p || isNaN(v) || v <= 0) { toast('Ingresa cantidad a añadir', 'err'); return; }
+  if (Array.isArray(p.tones) && p.tones.length > 0) {
+    toast('Este producto tiene tonos — ajusta cada tono por separado ↓', 'err'); return;
+  }
   p.stock = (+p.stock || 0) + v;
   document.getElementById('ad-'+id).value = '';
   saveProds(); renderInv(); toast(`+${v} unidades añadidas ✓`, 'ok');
+}
+function addToneSt(pid, toneIdx) {
+  const p = PRODUCTS.find(x => x.id === pid);
+  if (!p || !Array.isArray(p.tones) || !p.tones[toneIdx]) return;
+  const v = parseInt(document.getElementById('ad-'+pid+'-t'+toneIdx).value);
+  if (isNaN(v) || v <= 0) { toast('Ingresa cantidad a añadir', 'err'); return; }
+  p.tones[toneIdx].stock = (+p.tones[toneIdx].stock || 0) + v;
+  p.stock = p.tones.reduce((s, t) => s + (+t.stock || 0), 0);
+  document.getElementById('ad-'+pid+'-t'+toneIdx).value = '';
+  saveProds(); renderInv(); toast(`+${v} unidades a ${p.tones[toneIdx].name} ✓`, 'ok');
 }
 function setPr(id) {
   const p = PRODUCTS.find(x => x.id === id);
@@ -1851,6 +1906,7 @@ function renderSettings() {
   renderZonesTable();
   renderAgencies();
   renderRestrictedZones();
+  renderCoupons();
 }
 
 function renderAgencies() {
@@ -1954,6 +2010,68 @@ function saveDisc() {
   localStorage.setItem(CK, JSON.stringify(existing));
   toast('Descuento actualizado ✓', 'ok');
   renderSettings();
+}
+
+// ════════════════════════════════════════════════
+// CÓDIGOS DE DESCUENTO
+// ════════════════════════════════════════════════
+
+function getCoupons() {
+  try { return JSON.parse(localStorage.getItem(CK) || '{}').coupons || []; } catch(e) { return []; }
+}
+function saveCoupons(list) {
+  const existing = JSON.parse(localStorage.getItem(CK) || '{}');
+  existing.coupons = list;
+  CFG.coupons = list;
+  localStorage.setItem(CK, JSON.stringify(existing));
+  syncToCloud('settings').catch(() => {});
+}
+function addCoupon() {
+  const code = (document.getElementById('c-code').value || '').trim().toUpperCase();
+  const pct  = parseFloat(document.getElementById('c-pct').value);
+  const uses  = parseInt(document.getElementById('c-uses').value) || 0;
+  if (!code)            { toast('Ingresa un código', 'err'); return; }
+  if (!pct || pct <= 0 || pct > 100) { toast('Ingresa un porcentaje entre 1 y 100', 'err'); return; }
+  const list = getCoupons();
+  if (list.find(c => c.code === code)) { toast('Ese código ya existe', 'err'); return; }
+  list.push({ code, pct, uses, usedCount: 0, active: true });
+  saveCoupons(list);
+  document.getElementById('c-code').value = '';
+  document.getElementById('c-pct').value  = '';
+  document.getElementById('c-uses').value = '';
+  renderCoupons();
+  toast(`Código ${code} creado (${pct}% desc.) ✓`, 'ok');
+}
+function deleteCoupon(code) {
+  if (!confirm('¿Eliminar el código ' + code + '?')) return;
+  saveCoupons(getCoupons().filter(c => c.code !== code));
+  renderCoupons();
+  toast('Código eliminado', 'ok');
+}
+function toggleCoupon(code) {
+  const list = getCoupons();
+  const c = list.find(x => x.code === code);
+  if (c) { c.active = !c.active; saveCoupons(list); renderCoupons(); }
+}
+function renderCoupons() {
+  const el = document.getElementById('coupons-list');
+  if (!el) return;
+  const list = getCoupons();
+  if (!list.length) { el.innerHTML = '<div style="font-size:12px;color:var(--ts);margin-top:4px">Sin códigos creados.</div>'; return; }
+  el.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:6px">
+    <thead><tr style="color:var(--ts)"><th style="text-align:left;padding:4px 6px">Código</th><th>%</th><th>Usos límite</th><th>Usados</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${list.map(c => `<tr style="border-top:var(--border)">
+      <td style="padding:4px 6px;font-weight:700">${c.code}</td>
+      <td style="text-align:center">${c.pct}%</td>
+      <td style="text-align:center">${c.uses || '∞'}</td>
+      <td style="text-align:center">${c.usedCount || 0}</td>
+      <td style="text-align:center"><span style="color:${c.active?'var(--ok)':'var(--err)'}">${c.active?'Activo':'Inactivo'}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="mb ok" onclick="toggleCoupon('${c.code}')" title="${c.active?'Desactivar':'Activar'}">${c.active?'⏸':'▶'}</button>
+        <button class="mb del" onclick="deleteCoupon('${c.code}')" title="Eliminar" style="margin-left:4px">🗑</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
 }
 
 // ════════════════════════════════════════════════
