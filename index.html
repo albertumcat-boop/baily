@@ -2000,31 +2000,12 @@ async function submitOrder(){
             }
           }
         });
+        // Solo verificar — NO descontar aquí.
+        // El stock se descuenta cuando el admin confirma el pedido en el panel.
+        // Modelo correcto para Baily: el pedido por WhatsApp es una intención,
+        // no una venta confirmada. El admin valida el pago antes de confirmar.
         if(errors.length > 0) throw new Error('STOCK_INSUFICIENTE:' + errors.join('||'));
-
-        // Stock suficiente — descontar en Firestore dentro de la misma transacción
-        cart.forEach(item => {
-          const pid = item.realId || item.productId;
-          const p = JSON.parse(JSON.stringify(prodMap[pid]));
-          const ref = _storeDb.collection('products').doc(pid);
-          if(Array.isArray(p.tones) && p.tones.length > 0){
-            let tone = null;
-            if(item.toneIdx !== undefined && p.tones[item.toneIdx]) tone = p.tones[item.toneIdx];
-            else if(item.toneName) tone = p.tones.find(t => t.name && t.name.toLowerCase()===item.toneName.toLowerCase());
-            if(tone){
-              tone.stock = Math.max(0, (+tone.stock||0) - item.qty);
-              p.stock = p.tones.reduce((s,t) => s+(+t.stock||0), 0);
-            }
-          } else {
-            p.stock = Math.max(0, (+p.stock||0) - item.qty);
-          }
-          tx.update(ref, { stock: p.stock, tones: p.tones || [] });
-          // Actualizar también en memoria local
-          const local = PRODUCTS.find(x => x.id === pid);
-          if(local){ local.stock = p.stock; if(p.tones) local.tones = p.tones; }
-        });
       });
-      localStorage.setItem(IK, JSON.stringify(PRODUCTS));
     } catch(e) {
       if(btn){btn.disabled=false;btn.textContent='Confirmar pedido';}
       if(e.message && e.message.startsWith('STOCK_INSUFICIENTE:')){
