@@ -2274,20 +2274,13 @@ document.addEventListener('keypress', e => {
 });
 
 function openAdminModal() {
-  _adminAttempts = 0;
-  document.getElementById('admin-pw-inp').value = '';
-  document.getElementById('admin-pw-err').textContent = '';
   document.getElementById('admin-modal-bg').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('admin-pw-inp').focus(), 100);
 }
 
 function closeAdminModal() {
   document.getElementById('admin-modal-bg').classList.remove('open');
-  document.getElementById('admin-pw-inp').value = '';
-  document.getElementById('admin-pw-err').textContent = '';
   document.body.style.overflow = '';
-  _adminAttempts = 0;
 }
 
 function checkAdminPw() {
@@ -2935,13 +2928,8 @@ function detectZoneFromAddress(address) {
   <div class="admin-modal-box" id="admin-modal-box">
     <div class="admin-modal-logo">B<em>A</em>ILY</div>
     <div class="admin-modal-sub">Acceso al panel de administración</div>
-    <input type="password" class="admin-pw-inp" id="admin-pw-inp"
-      placeholder="••••••••"
-      onkeydown="if(event.key==='Enter')checkAdminPw()"
-      oninput="document.getElementById('admin-pw-err').textContent=''">
-    <div class="admin-pw-err" id="admin-pw-err"></div>
     <button class="admin-pw-btn" onclick="checkAdminPw()">
-      <i class="fa-solid fa-lock-open"></i> Entrar
+      <i class="fa-solid fa-lock-open"></i> Ir al panel admin
     </button>
     <button class="admin-pw-cancel" onclick="closeAdminModal()">Cancelar</button>
   </div>
