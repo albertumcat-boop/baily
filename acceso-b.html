@@ -1291,10 +1291,14 @@ function syncCatsBrandsToCloud(type) {
   window._fbCatsBrandsTimer = setTimeout(() => {
     try {
       if (type === 'categories') {
-        db.collection('settings').doc('categories').set(CATS).catch(e => handleFireError(e, 'Sync categorías'));
+        db.collection('settings').doc('categories').set(CATS)
+          .then(() => console.log('[BAILY] Categorías sincronizadas'))
+          .catch(e => handleFireError(e, 'Sync categorías'));
       } else if (type === 'brands') {
         const meta = JSON.parse(localStorage.getItem('baily_brand_meta') || '{}');
-        db.collection('settings').doc('brands').set(meta).catch(e => handleFireError(e, 'Sync marcas'));
+        db.collection('settings').doc('brands').set(meta)
+          .then(() => console.log('[BAILY] Marcas sincronizadas'))
+          .catch(e => handleFireError(e, 'Sync marcas'));
       }
     } catch(e) { console.log('syncCatsBrandsToCloud error:', e); }
   }, 1200);
@@ -2422,7 +2426,10 @@ function renderOrderCard(o, isPending) {
     </div>`;
 }
 
+var _confirmingOrderId = null;
 function confirmOrder(orderId) {
+  if (_confirmingOrderId === orderId) return; // guard doble-click
+  _confirmingOrderId = orderId;
   const orders = getOrders();
   const ord = orders.find(o => o.id === orderId);
   if (!ord) return;
@@ -2473,6 +2480,7 @@ function confirmOrder(orderId) {
     syncToCloud('products').catch(e => handleFireError(e, 'Sync stock post-venta'));
   }
 
+  _confirmingOrderId = null;
   if (stockWarnings.length > 0) {
     toast(`✅ Venta confirmada. ⚠️ Stock insuficiente en: ${stockWarnings.join(', ')}`, 'ok');
   } else {
@@ -3518,6 +3526,13 @@ async function syncFromCloud(type) {
     if (type === 'products') {
       const snap = await db.collection('products').get();
       if (snap.empty) { fbLog('⚠️ No hay productos en la nube'); return; }
+      // Advertir si la nube tiene significativamente menos productos que local
+      // para evitar borrar catálogo por un sync parcial accidental
+      if (snap.docs.length < PRODUCTS.length) {
+        const diff = PRODUCTS.length - snap.docs.length;
+        const ok = confirm(`⚠️ La nube tiene ${snap.docs.length} productos pero tú tienes ${PRODUCTS.length} localmente (${diff} menos en la nube).\n\nSi continúas, los ${diff} productos que no están en la nube se eliminarán del admin.\n\n¿Continuar de todas formas?`);
+        if (!ok) { fbLog('⚠️ Descarga cancelada — catálogo local conservado'); return; }
+      }
       // Cloud is source of truth — use cloud products directly
       // Only preserve local images if cloud doesn't have them
       const cloudMap = {};

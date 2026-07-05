@@ -739,23 +739,28 @@ try {
   }
 } catch(e) {}
 
+var _cfgUnsub = null;
+function subscribeCFG() {
+  if (!_storeDb || _cfgUnsub) return;
+  _cfgUnsub = _storeDb.collection('settings').doc('general').onSnapshot(doc => {
+    if (!doc.exists) return;
+    const saved = doc.data();
+    // NEVER apply tasaBCV from Firestore — live API only
+    delete saved.tasaBCV;
+    Object.assign(CFG, saved);
+    CFG.tasaBCV = 0;
+    const toStore = {...CFG};
+    delete toStore.tasaBCV;
+    localStorage.setItem(CK, JSON.stringify(toStore));
+    console.log('[BAILY Store] Config actualizada en vivo desde Firestore');
+    // Si el carrito está abierto, re-renderizar para reflejar descuentos/cupones actuales
+    const cartOpen = document.getElementById('cart-panel')?.classList.contains('open');
+    if (cartOpen) renderCart();
+  }, e => { console.log('[BAILY Store] Error en listener de config:', e.message); });
+}
 async function loadCFGFromFirestore() {
-  if (!_storeDb) return;
-  try {
-    const doc = await _storeDb.collection('settings').doc('general').get();
-    if (doc.exists) {
-      const saved = doc.data();
-      // NEVER apply tasaBCV from Firestore — live API only
-      delete saved.tasaBCV;
-      Object.assign(CFG, saved);
-      CFG.tasaBCV = 0; // ensure it stays 0 until API sets it
-      // Save to localStorage WITHOUT tasaBCV
-      const toStore = {...CFG};
-      delete toStore.tasaBCV;
-      localStorage.setItem(CK, JSON.stringify(toStore));
-      console.log('[BAILY Store] Config cargada desde Firestore');
-    }
-  } catch(e) { console.log('[BAILY Store] Error cargando config:', e.message); }
+  subscribeCFG();
+  return Promise.resolve();
 }
 
 
@@ -1406,6 +1411,12 @@ function removeCoupon(){
   renderCart();
 }
 
+// Fuente única para cálculo de descuento — evita drift entre renderCart, checkout y submitOrder
+function calculateDiscount(sub) {
+  const _couponPct = appliedCoupon && appliedCoupon.active ? appliedCoupon.pct : 0;
+  return CFG.descActive ? sub * (CFG.descPct ?? 35) / 100 : (_couponPct ? sub * _couponPct / 100 : 0);
+}
+
 function renderCart(){
   // Read config fresh from localStorage
   try{
@@ -1435,8 +1446,7 @@ function renderCart(){
   </div>`).join('');
 
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
-  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
+  const desc=calculateDiscount(sub);
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
@@ -1823,8 +1833,7 @@ function initDeliveryMap(){
       res.style.display='block';
       if(dist<=radius){
         const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-        const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
-        const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
+        const desc=calculateDiscount(sub);
         const subD=sub-desc;
         const free=subD>=(CFG.freeThreshold??30);
         res.className='map-result map-ok';
@@ -1962,12 +1971,15 @@ async function submitOrder(){
   if(!cedula){toast('⚠️ Ingresa tu cédula','err');return;}
   if(!email){toast('⚠️ Ingresa tu correo electrónico','err');return;}
 
+  // Deshabilitar botón desde el inicio para evitar doble-submit (con o sin Firebase)
+  const btn=document.getElementById('co-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Procesando...';}
+
   // Verificar y reservar stock en Firestore mediante transacción atómica
   // Si dos clientes intentan comprar el último producto al mismo tiempo,
   // solo uno pasa — el otro recibe un mensaje claro antes de abrir WhatsApp.
   if(_storeDb){
-    const btn=document.getElementById('co-submit-btn');
-    if(btn){btn.disabled=true;btn.textContent='Verificando stock...';}
+    if(btn){btn.textContent='Verificando stock...';}
     try {
       await _storeDb.runTransaction(async tx => {
         // Leer stock actual de cada producto del carrito
@@ -2035,8 +2047,7 @@ async function submitOrder(){
 
   // Build WhatsApp message
   const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
-  const _couponPct=appliedCoupon&&appliedCoupon.active?appliedCoupon.pct:0;
-  const desc=CFG.descActive?sub*(CFG.descPct??35)/100:(_couponPct?sub*_couponPct/100:0);
+  const desc=calculateDiscount(sub);
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
@@ -2121,12 +2132,24 @@ _(Tasa BCV: ${tasa.toLocaleString('es-VE',{minimumFractionDigits:2})})_`;
     items:cart.map(i=>({...i})),sub:+sub.toFixed(2),desc:+desc.toFixed(2),envio:+envio.toFixed(2),total:+total.toFixed(2),totalBs:+(total*tasa).toFixed(2),
     tasaBCV:tasa,shipMode:selShipMode,address:selAddress,lat:selLat,lng:selLng,status:'pending',
     couponCode:appliedCoupon?appliedCoupon.code:null};
-  // Marcar cupón como usado (incrementar contador en Firestore vía settings)
+  // Marcar cupón como usado — transacción atómica para evitar race condition
+  // (dos clientes simultáneos no pueden ambos usar un cupón de 1 solo uso)
   if(appliedCoupon && _storeDb){
-    const coupons=Array.isArray(CFG.coupons)?CFG.coupons:[];
-    const idx=coupons.findIndex(c=>c.code===appliedCoupon.code);
-    if(idx>=0){ coupons[idx].usedCount=(coupons[idx].usedCount||0)+1; CFG.coupons=coupons; }
-    _storeDb.collection('settings').doc('general').update({coupons}).catch(()=>{});
+    const _couponCode = appliedCoupon.code;
+    _storeDb.runTransaction(async tx => {
+      const ref = _storeDb.collection('settings').doc('general');
+      const snap = await tx.get(ref);
+      const data = snap.exists ? snap.data() : {};
+      const coupons = Array.isArray(data.coupons) ? data.coupons : [];
+      const idx = coupons.findIndex(c => c.code === _couponCode);
+      if(idx < 0) return;
+      const c = coupons[idx];
+      if(c.uses > 0 && (c.usedCount||0) >= c.uses) throw new Error('COUPON_EXHAUSTED');
+      coupons[idx] = {...c, usedCount: (c.usedCount||0)+1};
+      tx.update(ref, {coupons});
+      // Actualizar CFG local para reflejar el nuevo usedCount
+      CFG.coupons = coupons;
+    }).catch(e => { if(e.message !== 'COUPON_EXHAUSTED') console.warn('[BAILY] Coupon tx error:', e.message); });
   }
   appliedCoupon=null;
   const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
@@ -2203,11 +2226,8 @@ setInterval(flushPendingOrders, 30000);
 
 
 
-const _ADMIN_PW_KEY = 'baily_admin_pw';
-
-function getAdminPw() {
-  return localStorage.getItem(_ADMIN_PW_KEY) || 'baily2026';
-}
+// La contraseña admin NO se guarda ni lee desde index.html.
+// checkAdminPw() redirige a acceso-b.html, que tiene su propio sistema de auth.
 
 // Logo × 5 clicks  — shows mini password modal
 function logoClick() {
@@ -2271,31 +2291,10 @@ function closeAdminModal() {
 }
 
 function checkAdminPw() {
-  const inp = document.getElementById('admin-pw-inp').value;
-  const err = document.getElementById('admin-pw-err');
-  const box = document.getElementById('admin-modal-box');
-
-  if (inp === getAdminPw()) {
-    // Correct — grant session and navigate
-    sessionStorage.setItem('baily_admin_auth', '1');
-    closeAdminModal();
-    window.location.href = 'acceso-b.html';
-  } else {
-    _adminAttempts++;
-    const left = 5 - _adminAttempts;
-    err.textContent = left > 0
-      ? `❌ Contraseña incorrecta · ${left} intento${left !== 1 ? 's' : ''} restante${left !== 1 ? 's' : ''}`
-      : '⛔ Demasiados intentos. Inténtalo más tarde.';
-    document.getElementById('admin-pw-inp').value = '';
-    // Shake
-    box.style.animation = 'none';
-    box.offsetHeight;
-    box.style.animation = 'shake2 .4s ease';
-    if (_adminAttempts >= 5) {
-      setTimeout(() => closeAdminModal(), 2000);
-      _adminAttempts = 0;
-    }
-  }
+  // No verificamos la contraseña aquí — acceso-b.html tiene su propio sistema
+  // de auth con lockout, Firebase Auth, etc. Solo redirigimos.
+  closeAdminModal();
+  window.location.href = 'acceso-b.html';
 }
 
 // ═══════════════════════════════════════════
