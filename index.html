@@ -813,6 +813,10 @@ function flushPendingOrders(){
     if (!firebase.apps.length) firebase.initializeApp(cfg);
     _storeDb = firebase.firestore();
     console.log('[BAILY Store] Firebase conectado');
+    // Suscribir CFG y catálogo inmediatamente — no esperar el setTimeout de 800ms
+    // Crítico para cupones: si el usuario abre el carrito antes de 800ms, CFG.coupons está vacío
+    subscribeCFG();
+    subscribeCatalog();
   } catch(e) {
     console.log('[BAILY Store] Firebase no disponible, usando localStorage');
   }
@@ -1394,10 +1398,24 @@ function closeCart(){
   document.body.style.overflow='';
   if(location.hash==='#carrito') history.back();
 }
-function applyCoupon(){
+async function applyCoupon(){
   const code=(document.getElementById('coupon-inp')?.value||'').trim().toUpperCase();
   if(!code){return;}
-  const coupons=Array.isArray(CFG.coupons)?CFG.coupons:[];
+
+  let coupons=Array.isArray(CFG.coupons)?CFG.coupons:[];
+
+  // Si CFG.coupons está vacío, puede ser que el onSnapshot no haya llegado aún.
+  // Intentar cargar directo de Firestore antes de rechazar el código.
+  if(!coupons.length && _storeDb){
+    try{
+      const doc=await _storeDb.collection('settings').doc('general').get();
+      if(doc.exists && Array.isArray(doc.data().coupons)){
+        coupons=doc.data().coupons;
+        CFG.coupons=coupons; // actualizar en memoria
+      }
+    }catch(e){ console.warn('[BAILY] No se pudo cargar cupones desde Firestore:', e.message); }
+  }
+
   const found=coupons.find(c=>c.code===code);
   if(!found){toast('Código no válido','err');return;}
   if(!found.active){toast('Este código está inactivo','err');return;}
@@ -1449,8 +1467,9 @@ function renderCart(){
   const desc=calculateDiscount(sub);
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
-  // nacional = cobro a destino (no se suma al total), retiro = gratis
-  const envio = selShipMode==='delivery' ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
+  // Delivery se cobra solo cuando el cliente ya seleccionó dirección en el mapa
+  const envio = (selShipMode==='delivery' && selAddress) ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
+  const _deliveryPending = selShipMode==='delivery' && !selAddress;
   const total=subD+envio;
   // Always use live BCV rate from the display element (not stored config)
   const _tasaEl = document.getElementById('tasa-display');
@@ -1509,7 +1528,7 @@ function renderCart(){
           </button>
         </div>
       </div>
-      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG._zoneDeliveryCost!==undefined?CFG._zoneDeliveryCost:(CFG.deliveryCost??3)}</strong> · Gratis en compras &gt; $${CFG.freeThreshold??30}</div>
+      <div class="map-hint" style="margin-bottom:10px">Costo delivery: <strong>$${CFG._zoneDeliveryCost!==undefined?CFG._zoneDeliveryCost:(CFG.deliveryCost??3)}</strong>${(CFG.showFreeMsg!==false)?` · Gratis en compras &gt; $${CFG.freeThreshold??30}`:''}</div>
     </div>
 
     <!-- INFO ENVIO NACIONAL -->
@@ -1592,7 +1611,9 @@ function renderCart(){
     ${CFG.descActive?`<div class="c-row disc"><span>Descuento (${CFG.descPct??35}%)</span><span>−$${desc.toFixed(2)}</span></div>`
       :(appliedCoupon?`<div class="c-row disc"><span>Descuento código ${appliedCoupon.code} (${appliedCoupon.pct}%)</span><span>−$${desc.toFixed(2)}</span></div>`:'')
     }
-    ${selShipMode!=='retiro'?`<div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>`:''}
+    ${selShipMode==='retiro'?'':_deliveryPending
+      ?`<div class="c-row"><span>Envío</span><span style="color:var(--ts);font-size:12px">por confirmar (selecciona dirección)</span></div>`
+      :`<div class="c-row"><span>Envío</span><span>${envio===0?'<span style="color:var(--ok)">Gratis</span>':'$'+envio.toFixed(2)}</span></div>`}
     
     <div class="c-row tot">
       <span>Total</span>
@@ -2051,7 +2072,8 @@ async function submitOrder(){
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??3);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
-  const envio = selShipMode==='delivery' ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
+  // Delivery solo se cobra si el cliente seleccionó dirección en el mapa
+  const envio = (selShipMode==='delivery' && selAddress) ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
   const total=subD+envio;
   // Always use live BCV rate from the display element (not stored config)
   const _tasaEl = document.getElementById('tasa-display');
