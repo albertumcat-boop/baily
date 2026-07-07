@@ -2297,7 +2297,6 @@ function changePw() {
   const conf = prompt('Confirma la nueva contraseña:');
   if (nw !== conf) { toast('Las contraseñas no coinciden', 'err'); return; }
   localStorage.setItem(PW_KEY, nw);
-  localStorage.setItem('baily_admin_pw', nw); // sync with index
   // Keep the Firebase Auth password in sync so admin writes keep working
   if (window.firebase && firebase.auth && firebase.auth().currentUser) {
     firebase.auth().currentUser.updatePassword(nw)
