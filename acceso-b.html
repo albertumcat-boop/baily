@@ -2027,6 +2027,7 @@ function saveDisc() {
   CFG.descActive = existing.descActive;
   CFG.descPct    = existing.descPct;
   localStorage.setItem(CK, JSON.stringify(existing));
+  syncToCloud('settings').catch(() => {});
   toast('Descuento actualizado ✓', 'ok');
   renderSettings();
 }
@@ -2489,7 +2490,9 @@ function confirmOrder(orderId) {
   if (fbReady && db) {
     db.collection('orders').doc(orderId).update({ status: 'confirmed', confirmedAt: ord.confirmedAt })
       .catch(e => handleFireError(e, 'Confirmar pedido en nube'));
-    syncToCloud('products').catch(e => handleFireError(e, 'Sync stock post-venta'));
+    syncToCloud('products')
+      .then(() => publishCatalogSnapshot())
+      .catch(e => handleFireError(e, 'Sync stock post-venta'));
   }
 
   _confirmingOrderId = null;
@@ -3284,7 +3287,7 @@ const _REAL_FB_CFG = {
   // Auto-pull al detectar dispositivo nuevo (localStorage vacío o con datos por defecto)
   setTimeout(async () => {
     if (!fbReady || !db) return;
-    const isNewDevice = !Array.isArray(PRODUCTS) || PRODUCTS.length === 0 || PRODUCTS[0].id === 'p0001';
+    const isNewDevice = !localStorage.getItem(IK);
     if (isNewDevice) {
       toast('Dispositivo nuevo — cargando datos desde la nube...', 'ok');
       await syncFromCloud('products').catch(() => {});

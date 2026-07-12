@@ -2171,7 +2171,12 @@ _(Tasa BCV: ${tasa.toLocaleString('es-VE',{minimumFractionDigits:2})})_`;
       tx.update(ref, {coupons});
       // Actualizar CFG local para reflejar el nuevo usedCount
       CFG.coupons = coupons;
-    }).catch(e => { if(e.message !== 'COUPON_EXHAUSTED') console.warn('[BAILY] Coupon tx error:', e.message); });
+    }).catch(e => {
+      if(e.message === 'COUPON_EXHAUSTED')
+        toast('⚠️ El código de descuento ya fue agotado — tu pedido continúa, el admin verificará', 'err');
+      else
+        console.warn('[BAILY] Coupon tx error:', e.message);
+    });
   }
   appliedCoupon=null;
   const orders=JSON.parse(localStorage.getItem('baily_orders')||'[]');
