@@ -2241,8 +2241,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMD();closeCart
 })();
 renderBrands();
 updBadge();
-renderPromoSlider();
-renderBlog();
+// Promos y blog NO se renderizan del localStorage — siempre esperar Firestore
+// para evitar flash de promos/descuentos desactivados que aún están en caché local
 loadDeliveryZones();
 // Load fresh data from Firestore (updates products, config in background)
 setTimeout(async () => {
