@@ -1478,7 +1478,7 @@ function renderCart(){
   const subD=sub-desc;
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??0);
   // Delivery se cobra solo cuando el cliente ya seleccionó dirección en el mapa
-  const envio = (selShipMode==='delivery' && selAddress) ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
+  const envio = (selShipMode==='delivery' && selAddress) ? ((CFG.showFreeMsg===true && subD>=(CFG.freeThreshold??9999))?0:_delCost) : 0;
   const _deliveryPending = selShipMode==='delivery' && !selAddress;
   const total=subD+envio;
   // Always use live BCV rate from the display element (not stored config)
@@ -1866,7 +1866,7 @@ function initDeliveryMap(){
         const sub=cart.reduce((s,i)=>s+i.price*i.qty,0);
         const desc=calculateDiscount(sub);
         const subD=sub-desc;
-        const free=subD>=(CFG.freeThreshold??30);
+        const free=CFG.showFreeMsg===true && subD>=(CFG.freeThreshold??9999);
         res.className='map-result map-ok';
         res.textContent='✅ Dentro de la zona de delivery — calculando costo...';
       }else{
@@ -2083,7 +2083,7 @@ async function submitOrder(){
   const _delCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost??0);
   // nacional = cobro a destino (no se suma al total), retiro = gratis
   // Delivery solo se cobra si el cliente seleccionó dirección en el mapa
-  const envio = (selShipMode==='delivery' && selAddress) ? (subD>=(CFG.freeThreshold??30)?0:_delCost) : 0;
+  const envio = (selShipMode==='delivery' && selAddress) ? ((CFG.showFreeMsg===true && subD>=(CFG.freeThreshold??9999))?0:_delCost) : 0;
   const total=subD+envio;
   // Always use live BCV rate from the display element (not stored config)
   const _tasaEl = document.getElementById('tasa-display');
@@ -2439,7 +2439,7 @@ function selectMapResult(lat, lon, displayName) {
       const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
       const desc = CFG.descActive ? sub * (CFG.descPct ?? 35) / 100 : 0;
       const subD = sub - desc;
-      const free = subD >= (CFG.freeThreshold ?? 30);
+      const free = CFG.showFreeMsg === true && subD >= (CFG.freeThreshold ?? 9999);
       res.className = 'map-result map-ok';
       const _zCost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost ?? 3);
       res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + _zCost);
@@ -2951,7 +2951,7 @@ function detectZoneFromAddress(address) {
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
     const desc = CFG.descActive ? sub * (CFG.descPct ?? 35) / 100 : 0;
     const subD = sub - desc;
-    const free = subD >= (CFG.freeThreshold ?? 30);
+    const free = CFG.showFreeMsg === true && subD >= (CFG.freeThreshold ?? 9999);
     const cost = CFG._zoneDeliveryCost !== undefined ? CFG._zoneDeliveryCost : (CFG.deliveryCost ?? 3);
     res.textContent = '✅ Dentro de la zona de delivery — Costo: ' + (free ? 'GRATIS 🎉' : '$' + cost);
   }
