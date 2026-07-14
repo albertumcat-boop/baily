@@ -3664,7 +3664,14 @@ async function syncAllToCloud() {
   if (!fbReady || !db) { toast('Firebase no configurado', 'err'); return; }
   const log = document.getElementById('fb-sync-log');
   if (log) log.innerHTML = '';
-  fbLog('🚀 Iniciando sincronización completa...');
+  // Paso 1: bajar primero lo que está en la nube para no pisar datos más nuevos
+  fbLog('🔄 Verificando datos en la nube...');
+  await syncFromCloud('products').catch(() => {});
+  await syncFromCloud('settings').catch(() => {});
+  await syncFromCloud('categories').catch(() => {});
+  await syncFromCloud('brands').catch(() => {});
+  // Paso 2: subir todo (ahora local = nube + cualquier cambio pendiente en este dispositivo)
+  fbLog('🚀 Subiendo todo a la nube...');
   await syncToCloud('settings');
   await syncToCloud('products');
   await publishCatalogSnapshot();
@@ -3672,7 +3679,7 @@ async function syncAllToCloud() {
   await syncToCloud('orders');
   await syncToCloud('promos');
   await syncToCloud('blog');
-  fbLog('🎉 ¡Todo subido exitosamente!');
+  fbLog('🎉 ¡Todo sincronizado!');
   toast('¡Todo sincronizado! ☁️', 'ok');
 }
 
