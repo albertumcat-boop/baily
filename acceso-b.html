@@ -3285,7 +3285,8 @@ const _REAL_FB_CFG = {
     localStorage.setItem(FB_CFG_KEY, JSON.stringify(_REAL_FB_CFG));
   }
   initFirebase(cfg);
-  // Auto-pull al detectar dispositivo nuevo O cuando la nube tiene datos más recientes
+  // Al abrir el panel: siempre bajar settings y verificar si los productos cambiaron
+  // La nube es la fuente de verdad — nunca se sobreescribe con datos locales viejos
   setTimeout(async () => {
     if (!fbReady || !db) return;
     const isNewDevice = !localStorage.getItem(IK);
@@ -3298,17 +3299,20 @@ const _REAL_FB_CFG = {
       renderPage('products');
       return;
     }
-    // Comparar timestamp de la nube vs último push local
-    // Si otro dispositivo publicó cambios más recientes, auto-pull silencioso
+    // Siempre bajar settings al iniciar (liviano, sin confirmar)
+    await syncFromCloud('settings').catch(() => {});
+    await syncFromCloud('categories').catch(() => {});
+    await syncFromCloud('brands').catch(() => {});
+    renderSettings();
+    // Comparar timestamp del catálogo — si la nube tiene productos más nuevos, bajarlos
     try {
       const catDoc = await db.collection('settings').doc('catalog').get();
       if (catDoc.exists) {
         const cloudUpdatedAt = catDoc.data().updatedAt || 0;
         const lastPush = parseInt(localStorage.getItem('baily_last_push') || '0');
         if (cloudUpdatedAt > lastPush) {
-          toast('Detectados cambios en la nube — actualizando...', 'ok');
+          toast('Productos actualizados desde la nube ☁️', 'ok');
           await syncFromCloud('products').catch(() => {});
-          await syncFromCloud('settings').catch(() => {});
           localStorage.setItem('baily_last_push', cloudUpdatedAt.toString());
           renderPage('products');
         }
