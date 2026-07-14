@@ -1189,7 +1189,7 @@ const RESTRICTED_ZONES_BASE = [
 
 const CFG_DEFAULT = {
   tasaBCV: 47.15,  descPct: 35, descActive: false, coupons: [],
-  deliveryCost: 3, freeThreshold: 30, wa: '+584242655274',
+  deliveryCost: 0, freeThreshold: 30, showFreeMsg: false, wa: '+584242655274',
   restrictedZones: RESTRICTED_ZONES_BASE,
   agencies: [
     { id:'mrw',    name:'MRW',    phone:'0212-262.8500', info:'Lun–Sáb 8am–6pm' },
@@ -1909,7 +1909,7 @@ function renderSettings() {
   document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 3;
   document.getElementById('s-free').value  = saved.freeThreshold ?? CFG.freeThreshold ?? 30;
   document.getElementById('s-wa').value    = saved.wa || CFG.wa || '+584242655274';
-  document.getElementById('s-freemsg').checked = saved.showFreeMsg !== undefined ? !!saved.showFreeMsg : true;
+  document.getElementById('s-freemsg').checked = !!saved.showFreeMsg;
   // Sync CFG with saved values
   Object.assign(CFG, saved);
   updateIvaLockUI();
@@ -3284,7 +3284,7 @@ const _REAL_FB_CFG = {
     localStorage.setItem(FB_CFG_KEY, JSON.stringify(_REAL_FB_CFG));
   }
   initFirebase(cfg);
-  // Auto-pull al detectar dispositivo nuevo (localStorage vacío o con datos por defecto)
+  // Auto-pull al detectar dispositivo nuevo O cuando la nube tiene datos más recientes
   setTimeout(async () => {
     if (!fbReady || !db) return;
     const isNewDevice = !localStorage.getItem(IK);
@@ -3295,7 +3295,24 @@ const _REAL_FB_CFG = {
       await syncFromCloud('categories').catch(() => {});
       await syncFromCloud('brands').catch(() => {});
       renderPage('products');
+      return;
     }
+    // Comparar timestamp de la nube vs último push local
+    // Si otro dispositivo publicó cambios más recientes, auto-pull silencioso
+    try {
+      const catDoc = await db.collection('settings').doc('catalog').get();
+      if (catDoc.exists) {
+        const cloudUpdatedAt = catDoc.data().updatedAt || 0;
+        const lastPush = parseInt(localStorage.getItem('baily_last_push') || '0');
+        if (cloudUpdatedAt > lastPush) {
+          toast('Detectados cambios en la nube — actualizando...', 'ok');
+          await syncFromCloud('products').catch(() => {});
+          await syncFromCloud('settings').catch(() => {});
+          localStorage.setItem('baily_last_push', cloudUpdatedAt.toString());
+          renderPage('products');
+        }
+      }
+    } catch(e) { console.log('[BAILY Admin] No se pudo verificar versión en nube:', e.message); }
   }, 2000);
   // Pull any new orders placed by customers from the storefront
   setTimeout(pullNewOrdersFromCloud, 1500);
@@ -3534,6 +3551,7 @@ async function publishCatalogSnapshot() {
       products: slim,
       updatedAt: Date.now()
     });
+    localStorage.setItem('baily_last_push', Date.now().toString());
     console.log('[BAILY Admin] Catálogo publicado (' + slim.length + ' productos)');
   } catch(e) {
     console.warn('[BAILY Admin] Error publicando catálogo:', e.message);
