@@ -799,7 +799,7 @@ textarea.finp{height:72px;resize:vertical;padding:10px 12px}
         </div>
         <div class="sc">
           <h3><i class="fa-solid fa-truck" style="color:var(--mauve);margin-right:6px"></i>Delivery & Contacto</h3>
-          <div class="srow"><span class="slbl">Costo delivery base ($)</span><div style="display:flex;gap:6px"><input class="finp" type="number" id="s-del" style="width:75px;height:34px" step="0.5"><button class="btn bp btn-sm" onclick="saveSF('deliveryCost','s-del',true)">Guardar</button></div></div>
+          <input type="hidden" id="s-del" value="0">
 
           <!-- DELIVERY ZONES TABLE -->
           <div style="margin-top:16px">
@@ -2008,6 +2008,7 @@ function saveSF(key, inpId, isNum) {
   } else {
     toast('❌ Error al guardar — intenta de nuevo', 'err');
   }
+  syncToCloud('settings').catch(() => {});
   renderSettings();
 }
 
@@ -3303,6 +3304,15 @@ const _REAL_FB_CFG = {
     await syncFromCloud('settings').catch(() => {});
     await syncFromCloud('categories').catch(() => {});
     await syncFromCloud('brands').catch(() => {});
+    // deliveryCost siempre 0 — los precios son por zona, no por base fija
+    // Esto limpia el valor viejo ($3) que pueda quedar en Firestore
+    if (CFG.deliveryCost !== 0) {
+      CFG.deliveryCost = 0;
+      const _cfgNow = JSON.parse(localStorage.getItem(CK) || '{}');
+      _cfgNow.deliveryCost = 0;
+      localStorage.setItem(CK, JSON.stringify(_cfgNow));
+      syncToCloud('settings').catch(() => {});
+    }
     renderSettings();
     // Comparar timestamp del catálogo — si la nube tiene productos más nuevos, bajarlos
     try {
