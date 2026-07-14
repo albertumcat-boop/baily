@@ -730,6 +730,10 @@ const CFG_DEFAULT = {tasaBCV:0,descPct:35,descActive:false,deliveryCost:0,freeTh
 let CFG = Object.assign({},CFG_DEFAULT,JSON.parse(localStorage.getItem(CK)||'{}'));
 // ALWAYS clear stored tasa — must come from live API only
 CFG.tasaBCV = 0;
+// descActive y showFreeMsg nunca se leen del localStorage al inicio —
+// siempre esperan confirmación de Firestore para evitar flash de descuentos viejos
+CFG.descActive = false;
+CFG.showFreeMsg = false;
 // Also clear from localStorage so it never loads stale value
 try {
   const _storedCfg = JSON.parse(localStorage.getItem(CK)||'{}');
