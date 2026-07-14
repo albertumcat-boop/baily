@@ -1906,7 +1906,7 @@ function renderSettings() {
   document.getElementById('s-tasa').value  = saved.tasaBCV  ?? CFG.tasaBCV ?? 47.15;
   document.getElementById('s-don').checked = saved.descActive !== undefined ? !!saved.descActive : !!CFG.descActive;
   document.getElementById('s-dpct').value  = saved.descPct  ?? CFG.descPct ?? 35;
-  document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 3;
+  document.getElementById('s-del').value   = saved.deliveryCost  ?? CFG.deliveryCost ?? 0;
   document.getElementById('s-free').value  = saved.freeThreshold ?? CFG.freeThreshold ?? 30;
   document.getElementById('s-wa').value    = saved.wa || CFG.wa || '+584242655274';
   document.getElementById('s-freemsg').checked = !!saved.showFreeMsg;
@@ -2023,7 +2023,8 @@ function saveFreeMsg() {
 function saveDisc() {
   const existing = JSON.parse(localStorage.getItem(CK) || '{}');
   existing.descActive = document.getElementById('s-don').checked;
-  existing.descPct    = parseFloat(document.getElementById('s-dpct').value) || 35;
+  const _pct = parseFloat(document.getElementById('s-dpct').value);
+  existing.descPct = isNaN(_pct) ? (existing.descPct ?? 35) : _pct;
   CFG.descActive = existing.descActive;
   CFG.descPct    = existing.descPct;
   localStorage.setItem(CK, JSON.stringify(existing));
